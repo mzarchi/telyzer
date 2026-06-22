@@ -30,7 +30,7 @@ Telyzer/
 │   └── utils/
 │
 ├── data/
-│   ├── sessions/        # فقط runtime data
+│   ├── sessions/  
 │   ├── exports/
 │   └── .gitkeep
 │
