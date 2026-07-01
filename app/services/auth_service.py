@@ -3,4 +3,6 @@ from PySide6.QtCore import QObject, Signal
 
 
 class AuthService(QObject):
-    pass
+    status_changed = Signal(str)
+    auth_success = Signal()
+    error_occurred = Signal(str)
