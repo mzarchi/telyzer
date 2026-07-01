@@ -6,3 +6,6 @@ class AuthService(QObject):
     status_changed = Signal(str)
     auth_success = Signal()
     error_occurred = Signal(str)
+    
+    def __init__(self):
+        super().__init__()
