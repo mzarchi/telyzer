@@ -435,7 +435,6 @@ class LoginWindow(QWidget):
                 15, 15,
             )
 
-# ════════════════════════════════════════════════════════════════
 
 def main() -> None:
     app = QApplication(sys.argv)
