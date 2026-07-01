@@ -12,11 +12,6 @@ from PySide6.QtWidgets import (
     QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-# ═══════════════════════════════════════════════════════════════════
-#  CONSTANTS
-# ═══════════════════════════════════════════════════════════════════
-
-# Central color palette.
 _C = {
     "bg":     "#17212B", "card":   "#1E2C3A", "bar":    "#151E27",
     "blue":   "#2AABEE", "blue_h": "#1E96D6", "blue_d": "#1880BB",
@@ -24,7 +19,6 @@ _C = {
     "input":  "#253340", "red":    "#E74C3C",
 }
 
-# (flag + country name, dial code)
 COUNTRIES: list[tuple[str, str]] = [
     ("🇮🇷 Iran",           "+98"),  ("🇺🇸 United States",  "+1"),
     ("🇬🇧 United Kingdom", "+44"),  ("🇩🇪 Germany",        "+49"),
@@ -41,10 +35,8 @@ COUNTRIES: list[tuple[str, str]] = [
     ("🇵🇱 Poland",         "+48"),  ("🇺🇦 Ukraine",        "+380"),
 ]
 
-# Digits only, 7–15 chars.
 _PHONE_RE = re.compile(r"^\d{7,15}$")
 
-# Widget styling (QSS)
 STYLESHEET = f"""
 * {{ font-family: 'Segoe UI', Arial, sans-serif; }}
 
@@ -138,16 +130,17 @@ QScrollBar::handle:vertical {{
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 """
 
+
 class CountryDialog(QDialog):
     """Country picker with search"""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        # Auto-close popup
-        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowType.Popup |
+                            Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(290, 400)
-        self.selected: Optional[tuple[str, str]] = None  # (flag, code)
+        self.selected: Optional[tuple[str, str]] = None
         self._build()
 
     def _build(self) -> None:
@@ -249,12 +242,13 @@ class TitleBar(QWidget):
 
 class LoginWindow(QWidget):
     """Frameless draggable login screen"""
-    
+
     SHADOW_MARGIN = 3
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(420, 570)
         self._drag: Optional[QPoint] = None
@@ -321,7 +315,8 @@ class LoginWindow(QWidget):
         lay.addWidget(title)
         lay.addSpacing(6)
 
-        sub = QLabel("Please confirm your country code\nand enter your phone number.")
+        sub = QLabel(
+            "Please confirm your country code\nand enter your phone number.")
         sub.setObjectName("Subtitle")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub.setWordWrap(True)
@@ -344,7 +339,8 @@ class LoginWindow(QWidget):
 
         self._phone = QLineEdit()
         self._phone.setPlaceholderText("912 345 6789")
-        self._phone.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._phone.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._phone.textChanged.connect(self._on_input_change)
         row.addWidget(self._phone)
 
@@ -418,7 +414,8 @@ class LoginWindow(QWidget):
 
         self._err.setText(" ")
         full = f"{self._code}{phone}"
-        print(f"[Telyzer] Number entered → {full}  |  Remember me: {self._remember.isChecked()}")
+        print(
+            f"[Telyzer] Number entered → {full}  |  Remember me: {self._remember.isChecked()}")
 
     # ── window shadow ──
 
@@ -445,7 +442,7 @@ def main() -> None:
 
     geo = app.primaryScreen().availableGeometry()
     win.move(
-        (geo.width()  - win.width())  // 2,
+        (geo.width() - win.width()) // 2,
         (geo.height() - win.height()) // 2,
     )
     win.show()
