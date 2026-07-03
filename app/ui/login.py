@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import re
-import sys
 from typing import Optional
 
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter
+from PySide6.QtGui import QBrush, QColor, QPainter
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QDialog, QHBoxLayout,
-    QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QPushButton, QSizePolicy, QVBoxLayout, QWidget,
+    QCheckBox, QDialog, QHBoxLayout, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QPushButton, QSizePolicy,
+    QVBoxLayout, QWidget,
 )
+
+from app.core.telegram import TelegramLoginWorker
 
 _C = {
     "bg":     "#17212B", "card":   "#1E2C3A", "bar":    "#151E27",
@@ -68,7 +69,6 @@ QLabel#FieldLbl {{
 QLabel#ErrLbl   {{ color: {_C['red']}; font-size: 11px; }}
 QLabel#PrivacyLbl {{
     color: {_C['gray']}; font-size: 11px;
-    line-height: 1.6;
 }}
 
 /* ── inputs ── */
@@ -132,8 +132,6 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 
 
 class CountryDialog(QDialog):
-    """Country picker with search"""
-
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.Popup |
@@ -158,8 +156,7 @@ class CountryDialog(QDialog):
 
         hdr = QLabel("Select Country")
         hdr.setStyleSheet(
-            f"color:{_C['white']}; font-size:15px; font-weight:bold; border:none;"
-        )
+            f"color:{_C['white']}; font-size:15px; font-weight:bold; border:none;")
         lay.addWidget(hdr)
 
         self._search = QLineEdit()
@@ -175,7 +172,6 @@ class CountryDialog(QDialog):
         self._fill(COUNTRIES)
 
     def _fill(self, items: list[tuple[str, str]]) -> None:
-        """Refresh list"""
         self._lst.clear()
         for name, code in items:
             it = QListWidgetItem(f"{name}   {code}")
@@ -183,7 +179,6 @@ class CountryDialog(QDialog):
             self._lst.addItem(it)
 
     def _filter(self, txt: str) -> None:
-        """Filter as user types"""
         q = txt.lower()
         self._fill([(n, c) for n, c in COUNTRIES if q in n.lower() or q in c])
 
@@ -193,8 +188,6 @@ class CountryDialog(QDialog):
 
 
 class TitleBar(QWidget):
-    """Custom draggable titlebar"""
-
     def __init__(self, win: QWidget) -> None:
         super().__init__(win)
         self.setObjectName("TitleBar")
@@ -205,11 +198,11 @@ class TitleBar(QWidget):
         lay.setContentsMargins(12, 0, 8, 0)
         lay.setSpacing(6)
 
-        icon = QLabel("✈")
+        icon = QLabel("📊")
         icon.setStyleSheet(f"color:{_C['blue']}; font-size:13px; border:none;")
         lay.addWidget(icon)
 
-        name = QLabel("TELYZER")
+        name = QLabel("Telyzer")
         name.setObjectName("AppName")
         lay.addWidget(name)
 
@@ -225,12 +218,9 @@ class TitleBar(QWidget):
             btn.clicked.connect(slot)
             lay.addWidget(btn)
 
-    # ── window drag handling ──
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:
-            self._drag = (
-                e.globalPosition().toPoint() - self.window().frameGeometry().topLeft()
-            )
+            self._drag = e.globalPosition().toPoint() - self.window().frameGeometry().topLeft()
 
     def mouseMoveEvent(self, e):
         if self._drag and e.buttons() == Qt.MouseButton.LeftButton:
@@ -241,8 +231,6 @@ class TitleBar(QWidget):
 
 
 class LoginWindow(QWidget):
-    """Frameless draggable login screen"""
-
     SHADOW_MARGIN = 3
 
     def __init__(self) -> None:
@@ -250,11 +238,12 @@ class LoginWindow(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(420, 570)
+        self.setFixedSize(420, 580)
         self._drag: Optional[QPoint] = None
 
         self._flag = "🇮🇷"
         self._code = "+98"
+        self.worker: Optional[TelegramLoginWorker] = None
 
         self._build()
 
@@ -269,8 +258,6 @@ class LoginWindow(QWidget):
     def mouseReleaseEvent(self, e):
         self._drag = None
 
-    # ── UI setup ──
-
     def _build(self) -> None:
         outer = QVBoxLayout(self)
         m = self.SHADOW_MARGIN
@@ -280,13 +267,7 @@ class LoginWindow(QWidget):
         card = QWidget()
         card.setObjectName("MainCard")
         card.setStyleSheet(
-            f"""
-            #MainCard {{
-            background: {_C['bg']};
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,14);
-            }}
-            """
+            f"#MainCard {{ background: {_C['bg']}; border-radius: 14px; border: 1px solid rgba(255,255,255,14); }}"
         )
         vlay = QVBoxLayout(card)
         vlay.setContentsMargins(0, 0, 0, 0)
@@ -298,37 +279,38 @@ class LoginWindow(QWidget):
 
     def _make_body(self) -> QWidget:
         body = QWidget()
-        lay = QVBoxLayout(body)
-        lay.setContentsMargins(44, 28, 44, 28)
-        lay.setSpacing(0)
+        self._layout = QVBoxLayout(body)
+        self._layout.setContentsMargins(44, 20, 44, 20)
+        self._layout.setSpacing(0)
 
-        # ── Header ──
-        logo = QLabel("✈")
+        logo = QLabel("📊")
         logo.setObjectName("Logo")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(logo)
-        lay.addSpacing(8)
+        self._layout.addWidget(logo)
+        self._layout.addSpacing(6)
 
         title = QLabel("Telyzer")
         title.setObjectName("Title")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(title)
-        lay.addSpacing(6)
+        self._layout.addWidget(title)
+        self._layout.addSpacing(4)
 
-        sub = QLabel(
+        self._sub = QLabel(
             "Please confirm your country code\nand enter your phone number.")
-        sub.setObjectName("Subtitle")
-        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setWordWrap(True)
-        lay.addWidget(sub)
-        lay.addSpacing(24)
+        self._sub.setObjectName("Subtitle")
+        self._sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._sub.setWordWrap(True)
+        self._layout.addWidget(self._sub)
+        self._layout.addSpacing(16)
 
-        lbl = QLabel("YOUR NUMBER")
-        lbl.setObjectName("FieldLbl")
-        lay.addWidget(lbl)
-        lay.addSpacing(5)
+        self._field_lbl = QLabel("YOUR NUMBER")
+        self._field_lbl.setObjectName("FieldLbl")
+        self._layout.addWidget(self._field_lbl)
+        self._layout.addSpacing(5)
 
-        row = QHBoxLayout()
+        self._row_layout_widget = QWidget()
+        row = QHBoxLayout(self._row_layout_widget)
+        row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
 
         self._country_btn = QPushButton(f"{self._flag}  {self._code}")
@@ -344,47 +326,54 @@ class LoginWindow(QWidget):
         self._phone.textChanged.connect(self._on_input_change)
         row.addWidget(self._phone)
 
-        lay.addLayout(row)
-        lay.addSpacing(6)
+        self._layout.addWidget(self._row_layout_widget)
 
-        # ── Options ──
+        self._code_input = QLineEdit()
+        self._code_input.setPlaceholderText("Enter verification code")
+        self._code_input.setVisible(False)
+        self._layout.addWidget(self._code_input)
+
+        self._password_input = QLineEdit()
+        self._password_input.setPlaceholderText("Enter 2FA Password")
+        self._password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._password_input.setVisible(False)
+        self._layout.addWidget(self._password_input)
+        self._layout.addSpacing(8)
+
         self._remember = QCheckBox("Remember me")
         self._remember.setCursor(Qt.CursorShape.PointingHandCursor)
-        lay.addWidget(self._remember)
-        lay.addSpacing(6)
+        self._layout.addWidget(self._remember)
+        self._layout.addSpacing(6)
 
-        # ── Error label (prevent layout jump) ──
         self._err = QLabel(" ")
         self._err.setObjectName("ErrLbl")
         self._err.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._err.setFixedHeight(16)
-        lay.addWidget(self._err)
-        lay.addSpacing(12)
+        self._layout.addWidget(self._err)
+        self._layout.addSpacing(10)
 
-        # ── Send button ──
         self._send_btn = QPushButton("Send Code")
         self._send_btn.setObjectName("SendBtn")
         self._send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._send_btn.clicked.connect(self._on_send)
-        lay.addWidget(self._send_btn)
-        lay.addSpacing(20)
+        self._layout.addWidget(self._send_btn)
+        self._layout.addSpacing(16)
 
-        # ── privacy ──
         privacy = QLabel(
-            'By signing in, you agree to our\n'
+            '<div style="line-height: 1.5; text-align: center;">'
+            'By signing in, you agree to our<br>'
             '<a href="#" style="color:#2AABEE; text-decoration:none;">Privacy Policy</a>'
             ' and '
             '<a href="#" style="color:#2AABEE; text-decoration:none;">Terms of Service</a>.'
+            '</div>'
         )
         privacy.setObjectName("PrivacyLbl")
         privacy.setAlignment(Qt.AlignmentFlag.AlignCenter)
         privacy.setTextFormat(Qt.TextFormat.RichText)
         privacy.setOpenExternalLinks(False)
-        lay.addWidget(privacy)
-
+        privacy.setWordWrap(True)
+        self._layout.addWidget(privacy)
         return body
-
-    # ── logic ──
 
     def _on_input_change(self, text: str) -> None:
         if text:
@@ -393,10 +382,7 @@ class LoginWindow(QWidget):
     def _pick_country(self) -> None:
         dlg = CountryDialog(self)
         dlg.setStyleSheet(STYLESHEET)
-
-        # Popup Y offset (negative = up)
         POPUP_Y_OFFSET = -40
-
         pos = self._country_btn.mapToGlobal(QPoint(0, POPUP_Y_OFFSET))
         dlg.move(pos)
         if dlg.exec() and dlg.selected:
@@ -404,7 +390,6 @@ class LoginWindow(QWidget):
             self._country_btn.setText(f"{self._flag}  {self._code}")
 
     def _on_send(self):
-        """UI-only send handler"""
         raw = self._phone.text().strip()
         phone = raw.lstrip("0")
 
@@ -412,12 +397,73 @@ class LoginWindow(QWidget):
             self._err.setText("⚠ Enter a valid number")
             return
 
-        self._err.setText(" ")
-        full = f"{self._code}{phone}"
-        print(
-            f"[Telyzer] Number entered → {full}  |  Remember me: {self._remember.isChecked()}")
+        self._err.setText("Sending code...")
+        self._send_btn.setEnabled(False)
+        full_number = f"{self._code}{phone}"
+        remember = self._remember.isChecked()
 
-    # ── window shadow ──
+        self.worker = TelegramLoginWorker(full_number, remember)
+        self.worker.code_sent.connect(self._on_code_sent)
+        self.worker.need_password.connect(self._on_need_password)
+        self.worker.login_success.connect(self._on_login_success)
+        self.worker.error_occurred.connect(self._on_error)
+        self.worker.start()
+
+    def _on_code_sent(self):
+        self._send_btn.setEnabled(True)
+        self._err.setText("Verification code sent.")
+
+        self._row_layout_widget.setVisible(False)
+        self._field_lbl.setText("VERIFICATION CODE")
+        self._code_input.setVisible(True)
+        self._code_input.setFocus()
+
+        self._send_btn.setText("Confirm Code")
+        self._send_btn.clicked.disconnect()
+        self._send_btn.clicked.connect(self._submit_code)
+
+    def _submit_code(self):
+        code = self._code_input.text().strip()
+        if not code:
+            self._err.setText("⚠ Enter the code you received")
+            return
+        self._err.setText("Checking code...")
+        self.worker.submit_code(code)
+
+    def _on_need_password(self):
+        self._err.setText("Two-Step Verification active.")
+
+        self._code_input.setVisible(False)
+        self._field_lbl.setText("2FA PASSWORD")
+        self._password_input.setVisible(True)
+        self._password_input.setFocus()
+
+        self._send_btn.setText("Verify Password")
+        self._send_btn.clicked.disconnect()
+        self._send_btn.clicked.connect(self._submit_password)
+
+    def _submit_password(self):
+        pwd = self._password_input.text().strip()
+        if not pwd:
+            self._err.setText("⚠ Enter your 2FA password")
+            return
+        self._err.setText("Checking password...")
+        self.worker.submit_password(pwd)
+
+    def _on_login_success(self, status):
+        self._err.setStyleSheet(f"color: {_C['blue']};")
+        self._err.setText("Logged in successfully!")
+        print(f"[Telyzer] Login Status: {status}")
+
+    def _on_error(self, err_msg):
+        self._send_btn.setEnabled(True)
+        self._err.setText(f"⚠ {err_msg}")
+
+    def closeEvent(self, event):
+        if self.worker:
+            self.worker.stop()
+            self.worker.wait()
+        event.accept()
 
     def paintEvent(self, _) -> None:
         p = QPainter(self)
@@ -431,23 +477,3 @@ class LoginWindow(QWidget):
                 self.rect().adjusted(m - i, m - i, i - m, i - m),
                 15, 15,
             )
-
-
-def main() -> None:
-    app = QApplication(sys.argv)
-    app.setFont(QFont("Segoe UI", 10))
-
-    win = LoginWindow()
-    win.setStyleSheet(STYLESHEET)
-
-    geo = app.primaryScreen().availableGeometry()
-    win.move(
-        (geo.width() - win.width()) // 2,
-        (geo.height() - win.height()) // 2,
-    )
-    win.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
