@@ -1,3 +1,6 @@
 test/
+build/
 __pycache__/
+
+*.spec
 config.ini

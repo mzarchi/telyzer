@@ -18,3 +18,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''
+pyinstaller --onefile --icon=icon/cisco-app.ico --name=Telyzer_vC36-2607 main.py
+pyinstaller --onefile --name=Telyzer_vC36-2607 main.py
+git rev-list --count HEAD
+'''
