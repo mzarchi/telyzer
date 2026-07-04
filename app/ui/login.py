@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.telegram import TelegramLoginWorker
+from app.core.session import get_last_session_phone
 
 _C = {
     "bg":     "#17212B", "card":   "#1E2C3A", "bar":    "#151E27",
@@ -238,8 +239,10 @@ class LoginWindow(QWidget):
         self._flag = "🇮🇷"
         self._code = "+98"
         self.worker: Optional[TelegramLoginWorker] = None
+        self._session_checker: Optional[TelegramLoginWorker] = None
 
         self._build()
+        self._check_existing_session()
 
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:
@@ -271,16 +274,18 @@ class LoginWindow(QWidget):
         vlay.addWidget(TitleBar(self))
 
         self.stack = QStackedWidget()
+
         self.page_login = self._make_body()
         self.page_empty = QWidget()
         self.page_empty.setStyleSheet(
             f"background: {_C['bg']}; border-bottom-left-radius:14px; border-bottom-right-radius:14px;")
 
-        self.stack.addWidget(self.page_login)
         self.stack.addWidget(self.page_empty)
+        self.stack.addWidget(self.page_login)
+
+        self.stack.setCurrentWidget(self.page_empty)
 
         vlay.addWidget(self.stack)
-
         outer.addWidget(card)
 
     def _make_body(self) -> QWidget:
@@ -347,6 +352,7 @@ class LoginWindow(QWidget):
         self._layout.addSpacing(8)
 
         self._remember = QCheckBox("Remember me")
+        self._remember.setChecked(True)
         self._remember.setCursor(Qt.CursorShape.PointingHandCursor)
         self._layout.addWidget(self._remember)
         self._layout.addSpacing(6)
@@ -381,6 +387,31 @@ class LoginWindow(QWidget):
         self._layout.addWidget(privacy)
         return body
 
+    # ----------------------------------------------------
+    # Auto-Login Logic
+    # ----------------------------------------------------
+
+    def _check_existing_session(self) -> None:
+        phone = get_last_session_phone()
+
+        if not phone:
+            self.stack.setCurrentWidget(self.page_login)
+            return
+
+        self._session_checker = TelegramLoginWorker(phone, remember=True)
+        self._session_checker.session_checked.connect(
+            self._on_session_check_result)
+        self._session_checker.start()
+        self._session_checker.check_active_session()
+
+    def _on_session_check_result(self, is_authorized: bool) -> None:
+        if is_authorized:
+            self.stack.setCurrentWidget(self.page_empty)
+        else:
+            self.stack.setCurrentWidget(self.page_login)
+
+    # ----------------------------------------------------
+
     def _on_input_change(self, text: str) -> None:
         if text:
             self._err.setText(" ")
@@ -397,7 +428,10 @@ class LoginWindow(QWidget):
 
     def _on_send(self):
         raw = self._phone.text().strip()
-        phone = raw.lstrip("0")
+        phone = "".join(ch for ch in raw if ch.isdigit())
+
+        if phone.startswith("0"):
+            phone = phone[1:]
 
         if not _PHONE_RE.match(phone):
             self._err.setText("⚠ Enter a valid number")
@@ -405,6 +439,7 @@ class LoginWindow(QWidget):
 
         self._err.setText("Sending code...")
         self._send_btn.setEnabled(False)
+
         full_number = f"{self._code}{phone}"
         remember = self._remember.isChecked()
 
@@ -414,6 +449,7 @@ class LoginWindow(QWidget):
         self.worker.login_success.connect(self._on_login_success)
         self.worker.error_occurred.connect(self._on_error)
         self.worker.start()
+        self.worker.send_code()
 
     def _on_code_sent(self):
         self._send_btn.setEnabled(True)
@@ -434,7 +470,8 @@ class LoginWindow(QWidget):
             self._err.setText("⚠ Enter the code you received")
             return
         self._err.setText("Checking code...")
-        self.worker.submit_code(code)
+        if self.worker:
+            self.worker.submit_code(code)
 
     def _on_need_password(self):
         self._err.setText("Two-Step Verification active.")
@@ -454,7 +491,8 @@ class LoginWindow(QWidget):
             self._err.setText("⚠ Enter your 2FA password")
             return
         self._err.setText("Checking password...")
-        self.worker.submit_password(pwd)
+        if self.worker:
+            self.worker.submit_password(pwd)
 
     def _on_login_success(self, status):
         self.stack.setCurrentWidget(self.page_empty)
@@ -467,6 +505,9 @@ class LoginWindow(QWidget):
         if self.worker:
             self.worker.stop()
             self.worker.wait()
+        if self._session_checker:
+            self._session_checker.stop()
+            self._session_checker.wait()
         event.accept()
 
     def paintEvent(self, _) -> None:

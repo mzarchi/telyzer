@@ -1,37 +1,24 @@
-from __future__ import annotations
-
 from configparser import ConfigParser
 from pathlib import Path
 
 
-CONFIG_FILE = Path(__file__).resolve().parents[2] / "config.ini"
+def load_telegram_config():
+    base = Path(__file__).resolve().parents[2]
+    path = base / "config.ini"
 
+    if not path.exists():
+        raise FileNotFoundError("config.ini not found")
 
-def load_telegram_config() -> tuple[int, str]:
     parser = ConfigParser()
+    parser.read(path, encoding="utf-8")
 
-    if not CONFIG_FILE.exists():
-        raise FileNotFoundError(
-            f"Config file not found: {CONFIG_FILE}"
-        )
+    if "telegram" not in parser:
+        raise KeyError("[telegram] section missing")
 
-    parser.read(CONFIG_FILE, encoding="utf-8")
+    api_id = parser.getint("telegram", "api_id", fallback=None)
+    api_hash = parser.get("telegram", "api_hash", fallback=None)
 
-    if not parser.has_section("telegram"):
-        raise ValueError("Missing [telegram] section in config.ini")
+    if not api_id or not api_hash:
+        raise ValueError("Invalid api_id or api_hash in config.ini")
 
-    api_id_raw = parser.get("telegram", "api_id", fallback="").strip()
-    api_hash = parser.get("telegram", "api_hash", fallback="").strip()
-
-    if not api_id_raw:
-        raise ValueError("telegram.api_id is empty in config.ini")
-
-    if not api_hash:
-        raise ValueError("telegram.api_hash is empty in config.ini")
-
-    try:
-        api_id = int(api_id_raw)
-    except ValueError as exc:
-        raise ValueError("telegram.api_id must be an integer") from exc
-
-    return api_id, api_hash
+    return {"api_id": api_id, "api_hash": api_hash}
