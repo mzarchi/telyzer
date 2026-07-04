@@ -78,7 +78,7 @@ class TelegramLoginWorker(QThread):
             api_hash=self.api_hash,
             device_model="Telyzer (Telegram Analyzer)",
             system_version="Windows",
-            app_version="vC36-2607",
+            app_version="vC38-2607",
             lang_code="en",
         )
 
