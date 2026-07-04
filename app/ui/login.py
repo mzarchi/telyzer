@@ -8,7 +8,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter
 from PySide6.QtWidgets import (
     QCheckBox, QDialog, QHBoxLayout, QLabel, QLineEdit,
     QListWidget, QListWidgetItem, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget,
+    QVBoxLayout, QWidget, QStackedWidget,
 )
 
 from app.core.telegram import TelegramLoginWorker
@@ -41,7 +41,6 @@ _PHONE_RE = re.compile(r"^\d{7,15}$")
 STYLESHEET = f"""
 * {{ font-family: 'Segoe UI', Arial, sans-serif; }}
 
-/* ── titlebar ── */
 QWidget#TitleBar {{
     background-color: {_C['bar']};
     border-bottom: 1px solid {_C['border']};
@@ -58,7 +57,6 @@ QPushButton#BtnClose, QPushButton#BtnMin {{
 QPushButton#BtnClose:hover {{ background: {_C['red']}; color: white; }}
 QPushButton#BtnMin:hover   {{ background: {_C['border']}; color: white; }}
 
-/* ── content ── */
 QLabel#Logo     {{ color: {_C['blue']}; font-size: 58px; }}
 QLabel#Title    {{ color: {_C['white']}; font-size: 22px; font-weight: bold; }}
 QLabel#Subtitle {{ color: {_C['gray']}; font-size: 13px; line-height: 1.5; }}
@@ -71,7 +69,6 @@ QLabel#PrivacyLbl {{
     color: {_C['gray']}; font-size: 11px;
 }}
 
-/* ── inputs ── */
 QLineEdit {{
     background: {_C['input']}; color: {_C['white']};
     border: 1.5px solid {_C['border']}; border-radius: 10px;
@@ -89,7 +86,6 @@ QPushButton#CountryBtn {{
 QPushButton#CountryBtn:hover   {{ border-color: {_C['blue']}; background: #2A3F52; }}
 QPushButton#CountryBtn:pressed {{ background: {_C['blue']}; color: white; border-color: {_C['blue']}; }}
 
-/* ── Send Code button ── */
 QPushButton#SendBtn {{
     background: {_C['blue']}; color: white; border: none;
     border-radius: 10px; padding: 13px;
@@ -98,7 +94,6 @@ QPushButton#SendBtn {{
 QPushButton#SendBtn:hover   {{ background: {_C['blue_h']}; }}
 QPushButton#SendBtn:pressed {{ background: {_C['blue_d']}; }}
 
-/* ── Remember Me ── */
 QCheckBox {{
     color: {_C['gray']}; font-size: 12px; spacing: 8px;
 }}
@@ -112,7 +107,6 @@ QCheckBox::indicator:checked {{
     image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMiAxMiI+PHBhdGggZD0iTTIgNmwzIDMgNS01IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==");
 }}
 
-/* ── country list ── */
 QListWidget {{
     background: {_C['input']}; color: {_C['white']};
     border: 1px solid {_C['border']}; border-radius: 8px;
@@ -269,11 +263,23 @@ class LoginWindow(QWidget):
         card.setStyleSheet(
             f"#MainCard {{ background: {_C['bg']}; border-radius: 14px; border: 1px solid rgba(255,255,255,14); }}"
         )
+
         vlay = QVBoxLayout(card)
         vlay.setContentsMargins(0, 0, 0, 0)
         vlay.setSpacing(0)
+
         vlay.addWidget(TitleBar(self))
-        vlay.addWidget(self._make_body())
+
+        self.stack = QStackedWidget()
+        self.page_login = self._make_body()
+        self.page_empty = QWidget()
+        self.page_empty.setStyleSheet(
+            f"background: {_C['bg']}; border-bottom-left-radius:14px; border-bottom-right-radius:14px;")
+
+        self.stack.addWidget(self.page_login)
+        self.stack.addWidget(self.page_empty)
+
+        vlay.addWidget(self.stack)
 
         outer.addWidget(card)
 
@@ -451,9 +457,7 @@ class LoginWindow(QWidget):
         self.worker.submit_password(pwd)
 
     def _on_login_success(self, status):
-        self._err.setStyleSheet(f"color: {_C['blue']};")
-        self._err.setText("Logged in successfully!")
-        print(f"[Telyzer] Login Status: {status}")
+        self.stack.setCurrentWidget(self.page_empty)
 
     def _on_error(self, err_msg):
         self._send_btn.setEnabled(True)
