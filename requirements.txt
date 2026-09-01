@@ -1,3 +1,1 @@
 telethon
-pyside6
-qasync
