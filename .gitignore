@@ -4,3 +4,4 @@ __pycache__/
 
 *.spec
 config.ini
+ready-commands.txt
