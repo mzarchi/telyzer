@@ -19,6 +19,7 @@ def main():
         
         input_user_choose = input(menu)
         if input_user_choose == "e":
+            tc.disconnect()
             break
         
         match input_user_choose:

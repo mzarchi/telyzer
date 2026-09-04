@@ -16,6 +16,9 @@ class TelyzerController:
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(config.ta._create_client())
+        
+    def cls(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def connect(self):
         is_valid = self.loop.run_until_complete(config.ta.connect())
@@ -44,5 +47,10 @@ class TelyzerController:
             print("Logout cancelled.")
             input("Press Enter to continue...")
 
-    def cls(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
+
+    def disconnect(self):
+        if config.ta and config.ta.client:
+            try:
+                self.loop.run_until_complete(config.ta.client.disconnect())
+            except:
+                pass
