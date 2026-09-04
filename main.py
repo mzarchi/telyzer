@@ -1,10 +1,9 @@
 import messages as msg
 from core.controller import TelyzerController
 
-tc = TelyzerController()
-
 
 def main():
+    tc = TelyzerController()
     while True:
         tc.cls()
         input_user_choose = input(msg.msg_main)
@@ -13,7 +12,7 @@ def main():
         else:
             match input_user_choose:
                 case "1":
-                    pass
+                    tc.connect()
 
 
 if __name__ == "__main__":
