@@ -1,5 +1,7 @@
-import messages as msg
+from telethon.tl.functions.contacts import GetContactsRequest
+from datetime import datetime
 from config import Config
+import messages as msg
 import asyncio
 import os
 
@@ -22,6 +24,14 @@ class TelyzerController:
 
     def cls(self):
         os.system('cls' if os.name == 'nt' else 'clear')
+    
+    def get_datetime(self):
+            result = {}
+            now = datetime.now()
+            result.update({"file_name": now.strftime("%Y-%m-%d_%H-%M-%S")})
+            result.update({"unix": str(int(now.timestamp()))})
+            return result
+    
 
     def connect(self):
         is_valid = self.loop.run_until_complete(self.cf.ta.connect())
@@ -72,8 +82,7 @@ class TelyzerController:
                     break
 
     def contacts_list(self):
-        from telethon.tl.functions.contacts import GetContactsRequest
-
+        dt = self.get_datetime()
         async def _get_contacts():
             result = await self.cf.ta.client(GetContactsRequest(hash=0))
             return result.users
@@ -117,27 +126,30 @@ class TelyzerController:
                 else:
                     status = str(contact.status)
 
-            print(f"{i}. {name}")
-            print(f"   ├─ ID: {contact.id}")
-            print(f"   ├─ Access Hash: {contact.access_hash}")
-            print(f"   ├─ Username: {username}")
-            print(f"   ├─ Phone: {phone}")
-            print(f"   ├─ Lang Code: {contact.lang_code or 'None'}")
-            print(f"   ├─ Status: {status}")
-            print(f"   ├─ Bot: {'Yes' if contact.bot else 'No'}")
-            print(f"   ├─ Verified: {'Yes' if contact.verified else 'No'}")
-            print(f"   ├─ Premium: {'Yes' if contact.premium else 'No'}")
-            print(f"   ├─ Scam: {'Yes' if contact.scam else 'No'}")
-            print(f"   ├─ Fake: {'Yes' if contact.fake else 'No'}")
-            print(f"   ├─ Restricted: {'Yes' if contact.restricted else 'No'}")
-            print(f"   ├─ Restriction Reason: {restriction_reason}")
-            print(f"   ├─ Contact: {'Yes' if contact.contact else 'No'}")
-            print(f"   ├─ Mutual: {'Yes' if contact.mutual_contact else 'No'}")
-            print(f"   ├─ Deleted: {'Yes' if contact.deleted else 'No'}")
-            print(f"   ├─ Support: {'Yes' if contact.support else 'No'}")
-            print(f"   ├─ Stories Hidden: {'Yes' if contact.stories_hidden else 'No'}")
-            print(f"   ├─ Stories Unavailable: {'Yes' if contact.stories_unavailable else 'No'}")
-            print(f"   └─ Photo ID: {contact.photo.photo_id if contact.photo else 'No photo'}")
-            print()
+            txt_fl = f"{i}. {name}\n"
+            txt_fl += f"   ├─ ID: {contact.id}\n"
+            txt_fl += f"   ├─ Access Hash: {contact.access_hash}\n"
+            txt_fl += f"   ├─ Username: {username}\n"
+            txt_fl += f"   ├─ Phone: +{phone}\n"
+            txt_fl += f"   ├─ Lang Code: {contact.lang_code or 'None'}\n"
+            txt_fl += f"   ├─ Status: {status}\n"
+            txt_fl += f"   ├─ Bot: {'Yes' if contact.bot else 'No'}\n"
+            txt_fl += f"   ├─ Verified: {'Yes' if contact.verified else 'No'}\n"
+            txt_fl += f"   ├─ Premium: {'Yes' if contact.premium else 'No'}\n"
+            txt_fl += f"   ├─ Scam: {'Yes' if contact.scam else 'No'}\n"
+            txt_fl += f"   ├─ Fake: {'Yes' if contact.fake else 'No'}\n"
+            txt_fl += f"   ├─ Restricted: {'Yes' if contact.restricted else 'No'}\n"
+            txt_fl += f"   ├─ Restriction Reason: {restriction_reason}\n"
+            txt_fl += f"   ├─ Contact: {'Yes' if contact.contact else 'No'}\n"
+            txt_fl += f"   ├─ Mutual: {'Yes' if contact.mutual_contact else 'No'}\n"
+            txt_fl += f"   ├─ Deleted: {'Yes' if contact.deleted else 'No'}\n"
+            txt_fl += f"   ├─ Support: {'Yes' if contact.support else 'No'}\n"
+            txt_fl += f"   ├─ Stories Hidden: {'Yes' if contact.stories_hidden else 'No'}\n"
+            txt_fl += f"   ├─ Stories Unavailable: {'Yes' if contact.stories_unavailable else 'No'}\n"
+            txt_fl += f"   └─ Photo ID: {contact.photo.photo_id if contact.photo else 'No photo'}\n\n"
+            with open(f"{self.cf.contacts_lists}Contacts_{dt['file_name']}.txt", "a", encoding="utf-8") as f:
+                f.write(txt_fl)
+            
+            print(f"{i:<4}. ID: {contact.id:<12} Phone: +{phone:<12}")
 
         input("Press Enter to continue...")
