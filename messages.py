@@ -7,7 +7,7 @@ Enter you choose: """
 
 msg_contacts = """Menu Options:
     1. Contacts List
-    2. Chat Analysis
+    2. Chat Stream
     3. Back
     
 Enter your choose: """
