@@ -194,13 +194,18 @@ class TelyzerController:
 
     def chat_stream(self, target_user):
         me = self.get_me()
-        my_username = me.username or str(me.id)
+        my_user_id = me.id
         target_user = target_user.replace("@", "")
         dt = self.get_datetime()
-        output_csv = f"{self.cf.chat_csv}{my_username}-{target_user}-{dt['file_name']}.csv"
 
         async def _stream():
             entity = await self.cf.ta.client.get_entity(target_user)
+            target_user_id = entity.id
+
+            user_folder = f"{self.cf.chat_csv}{target_user_id}/"
+            os.makedirs(user_folder, exist_ok=True)
+
+            output_csv = f"{user_folder}{target_user_id}-{my_user_id}-{dt['file_name']}.csv"
 
             total = await self.cf.ta.client.get_messages(entity, limit=0)
             total_messages = total.total
@@ -258,7 +263,7 @@ class TelyzerController:
 
             print(f"\nChat stream saved to: {output_csv}")
 
-            print("Last 5 messages:")
+            print("\nLast 5 messages:")
             print("-" * 80)
             print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
             print("-" * 80)
