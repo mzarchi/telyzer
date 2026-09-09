@@ -1,12 +1,16 @@
 from telethon.tl.functions.contacts import GetContactsRequest
+import matplotlib.pyplot as plt
 from datetime import datetime
 from config import Config
 from math import ceil
 import messages as msg
+import pandas as pd
 import asyncio
+import pytz
 import glob
 import csv
 import os
+
 
 
 class TelyzerController:
@@ -87,6 +91,10 @@ class TelyzerController:
                     self.cls()
 
                 case "3":
+                    self.chat_visualization()
+                    self.cls()
+
+                case "4":
                     break
 
     def contacts_list(self):
@@ -346,3 +354,124 @@ class TelyzerController:
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to continue...")
+        
+    def chat_visualization(self):
+        self.cls()
+        
+        if not os.path.exists(self.cf.chat_csv):
+            print("No chat CSV folder found!")
+            input("Press Enter to continue...")
+            return
+        
+        user_folders = [f for f in os.listdir(self.cf.chat_csv) if os.path.isdir(os.path.join(self.cf.chat_csv, f))]
+        
+        if not user_folders:
+            print("No user folders found!")
+            input("Press Enter to continue...")
+            return
+        
+        print("User folders:")
+        for i, folder in enumerate(user_folders, 1):
+            folder_path = os.path.join(self.cf.chat_csv, folder)
+            csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+            print(f"{i}. {folder} ({len(csv_files)} CSV files)")
+        
+        folder_choice = input("\nSelect folder number: ")
+        try:
+            folder_idx = int(folder_choice) - 1
+            selected_folder = user_folders[folder_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return
+        
+        folder_path = os.path.join(self.cf.chat_csv, selected_folder)
+        csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+        
+        if not csv_files:
+            print("No CSV files in this folder!")
+            input("Press Enter to continue...")
+            return
+        
+        csv_files.sort(key=os.path.getsize, reverse=True)
+        
+        print(f"\nCSV files in {selected_folder}:")
+        for i, file in enumerate(csv_files, 1):
+            file_name = os.path.basename(file)
+            file_size = os.path.getsize(file) / 1024  # KB
+            print(f"{i}. {file_name} ({file_size:.1f} KB)")
+        
+        file_choice = input("\nSelect file number: ")
+        try:
+            file_idx = int(file_choice) - 1
+            selected_file = csv_files[file_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return
+        
+        self.plot_chat(selected_file)
+
+
+    def plot_chat(self, csv_path):
+        csv_name = os.path.basename(csv_path)
+        df = pd.read_csv(csv_path)
+        df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
+        
+        iran_tz = pytz.timezone("Asia/Tehran")
+        df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
+        
+        df = df.sort_values("publish_datetime")
+        df["hour"] = (df["publish_datetime"].dt.hour +
+                    df["publish_datetime"].dt.minute / 60)
+        start_date = df["publish_datetime"].min()
+        df["days_from_start"] = (
+            (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
+        
+        names = csv_name.split("-")
+        my_user_id = names[0]
+        target_user_id = names[1].split("_")[0]
+        my_msgs = df[df["is_outgoing"] == True]
+        other_msgs = df[df["is_outgoing"] == False]
+        
+        print(f"User {my_user_id}: {len(my_msgs)} messages")
+        print(f"User {target_user_id}: {len(other_msgs)} messages")
+        
+        images_folder = f"{self.cf.chat_images}"
+        os.makedirs(images_folder, exist_ok=True)
+        
+        plt.figure(figsize=(8, 4))
+        
+        plt.scatter(
+            my_msgs["days_from_start"],
+            my_msgs["hour"],
+            s=1,
+            alpha=0.6,
+            color="#d62728",
+            label=f"{my_user_id} ({len(my_msgs)})"
+        )
+        
+        plt.scatter(
+            other_msgs["days_from_start"],
+            other_msgs["hour"],
+            s=1,
+            alpha=0.6,
+            color="#1f77b4",
+            label=f"{target_user_id} ({len(other_msgs)})"
+        )
+        
+        plt.xlabel("Days from First Message")
+        plt.ylabel("Hour of Day")
+        plt.ylim(0, 24)
+        
+        plt.grid(axis='y', linestyle='--', alpha=0.9)
+        plt.legend()
+        
+        today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+        plt.title("Chat Activity Distribution Over Time")
+        
+        output_image = f"{images_folder}{my_user_id}-{target_user_id}-{today_dt}.jpg"
+        plt.savefig(output_image, dpi=600)
+        plt.show()
+        
+        print(f"\nPlot saved to: {output_image}")
