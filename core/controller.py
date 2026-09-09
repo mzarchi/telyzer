@@ -4,6 +4,7 @@ from config import Config
 from math import ceil
 import messages as msg
 import asyncio
+import glob
 import csv
 import os
 
@@ -207,10 +208,61 @@ class TelyzerController:
 
             output_csv = f"{user_folder}{target_user_id}-{my_user_id}-{dt['file_name']}.csv"
 
-            total = await self.cf.ta.client.get_messages(entity, limit=0)
-            total_messages = total.total
+            pattern = f"{user_folder}{target_user_id}-{my_user_id}-*.csv"
+            existing_files = glob.glob(pattern)
 
-            with open(output_csv, mode="w", encoding="utf-8", newline="") as csvfile:
+            start_from_id = 0
+            old_file_path = None
+            append_mode = False
+
+            if existing_files:
+                old_file_path = max(existing_files, key=os.path.getsize)
+
+                max_msg_id = 0
+                with open(old_file_path, "r", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        try:
+                            msg_id = int(row["message_id"])
+                            if msg_id > max_msg_id:
+                                max_msg_id = msg_id
+                        except:
+                            pass
+
+                if max_msg_id > 0:
+                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(f"File size: {os.path.getsize(old_file_path)} bytes")
+                    print(f"Last message ID: {max_msg_id}")
+                    user_choice = input("Get only newer messages? (y/n): ")
+
+                    if user_choice.lower() == "y":
+                        start_from_id = max_msg_id
+                        append_mode = True
+                        print(f"Continuing from message ID: {start_from_id}")
+                    else:
+                        print("Starting from beginning...")
+
+            # محاسبه تعداد پیام‌های جدید
+            total_new = 0
+            if start_from_id > 0:
+                all_messages = await self.cf.ta.client.get_messages(
+                    entity,
+                    min_id=start_from_id,
+                    limit=0
+                )
+                total_new = all_messages.total
+            else:
+                all_messages = await self.cf.ta.client.get_messages(entity, limit=0)
+                total_new = all_messages.total
+
+            if append_mode and old_file_path:
+                import shutil
+                shutil.copy2(old_file_path, output_csv)
+                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+
+            mode = "a" if append_mode else "w"
+
+            with open(output_csv, mode=mode, encoding="utf-8", newline="") as csvfile:
                 fieldnames = [
                     "row_number",
                     "message_id",
@@ -224,12 +276,28 @@ class TelyzerController:
                 ]
 
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
 
-                count = 1
+                if append_mode:
+                    count = 0
+                    with open(output_csv, "r", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            count += 1
+                    count += 1
+                    print(f"Previous messages: {count - 1}")
+                else:
+                    writer.writeheader()
+                    count = 1
+
                 last_rows = []
+                new_count = 0
 
-                async for msg in self.cf.ta.client.iter_messages(entity, limit=None, reverse=True):
+                async for msg in self.cf.ta.client.iter_messages(
+                    entity,
+                    min_id=start_from_id if start_from_id else 0,
+                    limit=None,
+                    reverse=True
+                ):
                     message_data = {
                         "row_number": count,
                         "message_id": msg.id,
@@ -254,23 +322,27 @@ class TelyzerController:
                     ])
 
                     count += 1
+                    new_count += 1
 
-                    if total_messages > 0:
-                        percent = ceil(count / total_messages * 100)
-                        print(f"\rReading messages: {count}/{total_messages} ({percent}%)", end="")
+                    if total_new > 0:
+                        percent = ceil(new_count / total_new * 100)
+                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
                     else:
-                        print(f"\rReading messages: {count}", end="")
+                        print(f"\rReading new messages: {new_count}", end="")
 
             print(f"\nChat stream saved to: {output_csv}")
 
-            print("\nLast 5 messages:")
-            print("-" * 80)
-            print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
-            print("-" * 80)
+            if new_count == 0:
+                print("No new messages found!")
+            else:
+                print("\nLast 5 messages:")
+                print("-" * 80)
+                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print("-" * 80)
 
-            for row in last_rows[-5:]:
-                row_num, msg_id, ts, dt_str, sender_id, is_out = row
-                print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+                for row in last_rows[-5:]:
+                    row_num, msg_id, ts, dt_str, sender_id, is_out = row
+                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to continue...")
