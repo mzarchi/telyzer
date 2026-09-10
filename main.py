@@ -30,6 +30,9 @@ def main():
 
             case "2":
                 tc.contacts()
+                
+            case "3":
+                tc.groups()
 
 
 if __name__ == "__main__":

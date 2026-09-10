@@ -509,3 +509,329 @@ class TelyzerController:
         plt.show()
         
         print(f"\nPlot saved to: {output_image}")
+        
+    def groups(self):
+        self.cls()
+        while True:
+            user_choose = input(msg.msg_groups)
+            match user_choose:
+                case "1":
+                    target = input("Enter group username: ")
+                    self.group_stream(target)
+                    self.cls()
+
+                case "2":
+                    selected_file = self.explore_group_files()
+                    if selected_file:
+                        self.plot_group(selected_file)
+                    self.cls()
+
+                case "3":
+                    break
+
+
+    def group_stream(self, target_group):
+        me = self.get_me()
+        my_user_id = me.id
+        target_group = target_group.replace("@", "")
+        dt = self.get_datetime()
+
+        async def _stream():
+            entity = await self.cf.ta.client.get_entity(target_group)
+
+            # تشخیص گروه بودن
+            if not (hasattr(entity, 'megagroup') or hasattr(entity, 'title')):
+                print("This is not a group!")
+                return
+
+            group_id = entity.id
+            group_folder = f"{self.cf.group_csv}{group_id}/"
+            os.makedirs(group_folder, exist_ok=True)
+
+            output_csv = f"{group_folder}{group_id}-{my_user_id}-{dt['file_name']}.csv"
+
+            pattern = f"{group_folder}{group_id}-{my_user_id}-*.csv"
+            existing_files = glob.glob(pattern)
+
+            start_from_id = 0
+            old_file_path = None
+            append_mode = False
+
+            if existing_files:
+                old_file_path = max(existing_files, key=os.path.getsize)
+
+                max_msg_id = 0
+                with open(old_file_path, "r", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        try:
+                            msg_id = int(row["message_id"])
+                            if msg_id > max_msg_id:
+                                max_msg_id = msg_id
+                        except:
+                            pass
+
+                if max_msg_id > 0:
+                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(f"File size: {os.path.getsize(old_file_path)} bytes")
+                    print(f"Last message ID: {max_msg_id}")
+                    user_choice = input("Get only newer messages? (y/n): ")
+
+                    if user_choice.lower() == "y":
+                        start_from_id = max_msg_id
+                        append_mode = True
+                        print(f"Continuing from message ID: {start_from_id}")
+                    else:
+                        print("Starting from beginning...")
+
+            # محاسبه تعداد پیام‌های جدید
+            if start_from_id > 0:
+                all_messages = await self.cf.ta.client.get_messages(
+                    entity,
+                    min_id=start_from_id,
+                    limit=0
+                )
+                total_new = all_messages.total
+            else:
+                all_messages = await self.cf.ta.client.get_messages(entity, limit=0)
+                total_new = all_messages.total
+
+            if append_mode and old_file_path:
+                import shutil
+                shutil.copy2(old_file_path, output_csv)
+                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+
+            mode = "a" if append_mode else "w"
+
+            with open(output_csv, mode=mode, encoding="utf-8", newline="") as csvfile:
+                fieldnames = [
+                    "row_number",
+                    "message_id",
+                    "publish_timestamp",
+                    "publish_datetime",
+                    "sender_id",
+                    "is_outgoing",
+                    "message_type",
+                    "message_text",
+                    "message_edited"
+                ]
+
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                if append_mode:
+                    count = 0
+                    with open(output_csv, "r", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            count += 1
+                    count += 1
+                    print(f"Previous messages: {count - 1}")
+                else:
+                    writer.writeheader()
+                    count = 1
+
+                last_rows = []
+                new_count = 0
+
+                async for msg in self.cf.ta.client.iter_messages(
+                    entity,
+                    min_id=start_from_id if start_from_id else 0,
+                    limit=None,
+                    reverse=True
+                ):
+                    message_data = {
+                        "row_number": count,
+                        "message_id": msg.id,
+                        "publish_timestamp": int(msg.date.timestamp()),
+                        "publish_datetime": msg.date.isoformat(),
+                        "sender_id": msg.sender_id,
+                        "is_outgoing": msg.out,
+                        "message_type": self.detect_message_type(msg),
+                        "message_text": msg.raw_text,
+                        "message_edited": hasattr(msg, "edit_date") and msg.edit_date is not None
+                    }
+
+                    writer.writerow(message_data)
+
+                    last_rows.append([
+                        count,
+                        message_data["message_id"],
+                        message_data["publish_timestamp"],
+                        message_data["publish_datetime"],
+                        message_data["sender_id"],
+                        message_data["is_outgoing"]
+                    ])
+
+                    count += 1
+                    new_count += 1
+
+                    if total_new > 0:
+                        percent = ceil(new_count / total_new * 100)
+                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+                    else:
+                        print(f"\rReading new messages: {new_count}", end="")
+
+            print(f"\nGroup stream saved to: {output_csv}")
+
+            if new_count == 0:
+                print("No new messages found!")
+            else:
+                print("\nLast 5 messages:")
+                print("-" * 80)
+                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print("-" * 80)
+
+                for row in last_rows[-5:]:
+                    row_num, msg_id, ts, dt_str, sender_id, is_out = row
+                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+
+        self.loop.run_until_complete(_stream())
+        input("Press Enter to continue...")
+
+
+    def explore_group_files(self):
+        self.cls()
+
+        if not os.path.exists(self.cf.group_csv):
+            print("No group CSV folder found!")
+            input("Press Enter to continue...")
+            return None
+
+        group_folders = [f for f in os.listdir(self.cf.group_csv) if os.path.isdir(os.path.join(self.cf.group_csv, f))]
+
+        if not group_folders:
+            print("No group folders found!")
+            input("Press Enter to continue...")
+            return None
+
+        print("Group folders:")
+        for i, folder in enumerate(group_folders, 1):
+            folder_path = os.path.join(self.cf.group_csv, folder)
+            csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+            print(f"{i}. {folder} ({len(csv_files)} CSV files)")
+
+        folder_choice = input("\nSelect folder number (or 'b' to back): ")
+        if folder_choice.lower() == "b":
+            return None
+
+        try:
+            folder_idx = int(folder_choice) - 1
+            selected_folder = group_folders[folder_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return None
+
+        folder_path = os.path.join(self.cf.group_csv, selected_folder)
+        csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+
+        if not csv_files:
+            print("No CSV files in this folder!")
+            input("Press Enter to continue...")
+            return None
+
+        csv_files.sort(key=os.path.getsize, reverse=True)
+
+        print(f"\nCSV files in {selected_folder}:")
+        for i, file in enumerate(csv_files, 1):
+            file_name = os.path.basename(file)
+            file_size = os.path.getsize(file) / 1024
+            print(f"{i}. {file_name} ({file_size:.1f} KB)")
+
+        file_choice = input("\nSelect file number (or 'b' to back): ")
+        if file_choice.lower() == "b":
+            return None
+
+        try:
+            file_idx = int(file_choice) - 1
+            selected_file = csv_files[file_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return None
+
+        return selected_file
+
+
+    def plot_group(self, csv_path):
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import pytz
+        from datetime import datetime
+        from collections import Counter
+
+        csv_name = os.path.basename(csv_path)
+        df = pd.read_csv(csv_path)
+        df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
+
+        iran_tz = pytz.timezone("Asia/Tehran")
+        df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
+
+        df = df.sort_values("publish_datetime")
+        df["hour"] = (df["publish_datetime"].dt.hour +
+                    df["publish_datetime"].dt.minute / 60)
+        start_date = df["publish_datetime"].min()
+        df["days_from_start"] = (
+            (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
+
+        names = csv_name.split("-")
+        group_id = names[0]
+
+        # شمردن پیام‌های هر فرستنده
+        sender_counts = Counter(df["sender_id"])
+        top_senders = [sender for sender, _ in sender_counts.most_common(5)]
+
+        print(f"Group ID: {group_id}")
+        print(f"Total messages: {len(df)}")
+        print(f"Total senders: {len(sender_counts)}")
+        print(f"\nTop 5 active members:")
+        for sender_id, count in sender_counts.most_common(5):
+            print(f"  {sender_id}: {count} messages")
+
+        images_folder = f"{self.cf.group_csv}../images/"
+        os.makedirs(images_folder, exist_ok=True)
+
+        plt.figure(figsize=(10, 5))
+
+        # رنگ‌های مختلف برای ۵ نفر برتر
+        colors = ["#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd"]
+
+        # اول بقیه رو خاکستری کمرنگ بکش
+        other_df = df[~df["sender_id"].isin(top_senders)]
+        if not other_df.empty:
+            plt.scatter(
+                other_df["days_from_start"],
+                other_df["hour"],
+                s=2,
+                alpha=0.3,
+                color="gray",
+                label=f"Others ({len(other_df)})"
+            )
+
+        # بعد ۵ نفر برتر رو رنگ کن
+        for idx, sender_id in enumerate(top_senders):
+            sender_df = df[df["sender_id"] == sender_id]
+            plt.scatter(
+                sender_df["days_from_start"],
+                sender_df["hour"],
+                s=2,
+                alpha=0.7,
+                color=colors[idx % len(colors)],
+                label=f"{sender_id} ({len(sender_df)})"
+            )
+
+        plt.xlabel("Days from First Message")
+        plt.ylabel("Hour of Day")
+        plt.ylim(0, 24)
+
+        plt.grid(axis='y', linestyle='--', alpha=0.9)
+        plt.legend(loc='best', fontsize=8)
+
+        today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+        plt.title(f"Group Activity Distribution - {group_id}")
+        
+        output_image = f"{images_folder}group-{group_id}-{today_dt}.jpg"
+        plt.savefig(output_image, dpi=300)
+        plt.show()
+
+        print(f"\nPlot saved to: {output_image}")
