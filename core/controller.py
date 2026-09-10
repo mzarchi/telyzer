@@ -113,9 +113,38 @@ class TelyzerController:
 
         contacts.sort(key=lambda c: (c.first_name or '').lower())
 
-        file_path = f"{self.cf.contacts_lists}Contacts_{dt['file_name']}.txt"
+        file_path = f"{self.cf.contacts_lists}Contacts_{dt['file_name']}.csv"
 
-        with open(file_path, "a", encoding="utf-8") as f:
+        fieldnames = [
+            "row_number",
+            "id",
+            "access_hash",
+            "first_name",
+            "last_name",
+            "username",
+            "phone",
+            "lang_code",
+            "status",
+            "bot",
+            "verified",
+            "premium",
+            "scam",
+            "fake",
+            "restricted",
+            "restriction_reason",
+            "contact",
+            "mutual",
+            "deleted",
+            "support",
+            "stories_hidden",
+            "stories_unavailable",
+            "photo_id"
+        ]
+
+        with open(file_path, "w", encoding="utf-8", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
             for i, contact in enumerate(contacts, 1):
                 name = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
                 username = f"@{contact.username}" if contact.username else "No username"
@@ -146,34 +175,39 @@ class TelyzerController:
                     else:
                         status = str(contact.status)
 
-                txt_fl = f"{i}. {name}\n"
-                txt_fl += f"   ├─ ID: {contact.id}\n"
-                txt_fl += f"   ├─ Access Hash: {contact.access_hash}\n"
-                txt_fl += f"   ├─ Username: {username}\n"
-                txt_fl += f"   ├─ Phone: +{phone}\n"
-                txt_fl += f"   ├─ Lang Code: {contact.lang_code or 'None'}\n"
-                txt_fl += f"   ├─ Status: {status}\n"
-                txt_fl += f"   ├─ Bot: {'Yes' if contact.bot else 'No'}\n"
-                txt_fl += f"   ├─ Verified: {'Yes' if contact.verified else 'No'}\n"
-                txt_fl += f"   ├─ Premium: {'Yes' if contact.premium else 'No'}\n"
-                txt_fl += f"   ├─ Scam: {'Yes' if contact.scam else 'No'}\n"
-                txt_fl += f"   ├─ Fake: {'Yes' if contact.fake else 'No'}\n"
-                txt_fl += f"   ├─ Restricted: {'Yes' if contact.restricted else 'No'}\n"
-                txt_fl += f"   ├─ Restriction Reason: {restriction_reason}\n"
-                txt_fl += f"   ├─ Contact: {'Yes' if contact.contact else 'No'}\n"
-                txt_fl += f"   ├─ Mutual: {'Yes' if contact.mutual_contact else 'No'}\n"
-                txt_fl += f"   ├─ Deleted: {'Yes' if contact.deleted else 'No'}\n"
-                txt_fl += f"   ├─ Support: {'Yes' if contact.support else 'No'}\n"
-                txt_fl += f"   ├─ Stories Hidden: {'Yes' if contact.stories_hidden else 'No'}\n"
-                txt_fl += f"   ├─ Stories Unavailable: {'Yes' if contact.stories_unavailable else 'No'}\n"
-                txt_fl += f"   └─ Photo ID: {contact.photo.photo_id if contact.photo else 'No photo'}\n\n"
+                contact_data = {
+                    "row_number": i,
+                    "id": contact.id,
+                    "access_hash": contact.access_hash,
+                    "first_name": contact.first_name or "",
+                    "last_name": contact.last_name or "",
+                    "username": contact.username or "",
+                    "phone": phone,
+                    "lang_code": contact.lang_code or "",
+                    "status": status,
+                    "bot": contact.bot,
+                    "verified": contact.verified,
+                    "premium": contact.premium,
+                    "scam": contact.scam,
+                    "fake": contact.fake,
+                    "restricted": contact.restricted,
+                    "restriction_reason": restriction_reason,
+                    "contact": contact.contact,
+                    "mutual": contact.mutual_contact,
+                    "deleted": contact.deleted,
+                    "support": contact.support,
+                    "stories_hidden": contact.stories_hidden,
+                    "stories_unavailable": contact.stories_unavailable,
+                    "photo_id": contact.photo.photo_id if contact.photo else ""
+                }
 
-                f.write(txt_fl)
-                print(f"{i:<4}. ID: {contact.id:<12} Phone: +{phone:<12}")
+                writer.writerow(contact_data)
+                
+                print(f"{i:<6}  {contact.id:<14}  +{phone:<15}  {name}")
 
         print(f"\nContacts saved to: {file_path}")
         input("Press Enter to continue...")
-
+    
     def detect_message_type(self, msg):
         if msg.raw_text and not msg.media:
             return "text"
