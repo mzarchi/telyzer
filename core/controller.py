@@ -1,5 +1,6 @@
 import matplotlib
 matplotlib.use('TkAgg')
+matplotlib.rcParams['font.family'] = ['Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
 import matplotlib.pyplot as plt
 from telethon.tl.functions.contacts import GetContactsRequest
 from collections import Counter
@@ -565,7 +566,6 @@ class TelyzerController:
                 case "1":
                     target = input("Enter group username: ")
                     self.group_stream(target)
-                    self.cls()
 
                 case "2":
                     selected_file = self.explore_group_files()
@@ -578,9 +578,7 @@ class TelyzerController:
 
 
     def group_stream(self, target_group):
-        self.cls()
         me = self.get_me()
-        my_user_id = me.id
         target_group = target_group.replace("@", "")
         if target_group.lstrip("-").isdigit():
             target_group = int(target_group)
@@ -588,7 +586,17 @@ class TelyzerController:
         dt = self.get_datetime()
 
         async def _stream():
-            entity = await self.cf.ta.client.get_entity(target_group)
+            if isinstance(target_group, int):
+                entity = None
+                async for dialog in self.cf.ta.client.iter_dialogs():
+                    if dialog.entity.id == abs(target_group):
+                        entity = dialog.entity
+                        break
+                if entity is None:
+                    print("Group not found in your dialogs!")
+                    return
+            else:
+                entity = await self.cf.ta.client.get_entity(target_group)
 
             if not (hasattr(entity, 'megagroup') or hasattr(entity, 'title')):
                 print("This is not a group!")
@@ -827,13 +835,14 @@ class TelyzerController:
             group_id_val = int(group_id)
 
         sender_counts = Counter(df["sender_id"])
-        top_senders = [sender for sender, _ in sender_counts.most_common(5)]
+        top_senders = [sender for sender, _ in sender_counts.most_common(10)]
 
         print(f"Group ID: {group_id_val}")
         print(f"Total messages: {len(df)}")
         print(f"Total senders: {len(sender_counts)}")
-        print(f"\nTop 5 active members:")
-        for sender_id, count in sender_counts.most_common(5):
+        
+        print(f"\nTop 10 active members:")
+        for sender_id, count in sender_counts.most_common(10):
             print(f"  {sender_id}: {count} messages")
 
         images_folder = f"{self.cf.group_csv}../images/"
@@ -841,7 +850,8 @@ class TelyzerController:
 
         plt.figure(figsize=(10, 5))
 
-        colors = ["#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd"]
+        colors = ["#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd",
+          "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
         other_df = df[~df["sender_id"].isin(top_senders)]
         if not other_df.empty:
