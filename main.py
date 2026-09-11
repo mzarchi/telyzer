@@ -37,6 +37,7 @@ def main():
                 case "d":
                     tc.developers()
     except Exception as e:
+        tc.log(f"Error: {str(e)}")
         pass
 
 if __name__ == "__main__":

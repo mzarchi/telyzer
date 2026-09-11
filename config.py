@@ -21,12 +21,14 @@ class Config:
         self.chat_csv = f"{app_root}Chats-CSV/"
         self.group_csv = f"{app_root}Groups-CSV/"
         self.chat_images = f"{app_root}Chats-Images/"
+        self.system_logs = f"{app_root}System-Logs/"
 
         self.mk = [
             self.contact_lists,
             self.chat_csv,
             self.group_csv,
-            self.chat_images
+            self.chat_images,
+            self.system_logs
         ]
 
         for i in self.mk:

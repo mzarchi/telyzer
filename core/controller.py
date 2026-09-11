@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from telethon.tl.functions.contacts import GetContactsRequest
 from collections import Counter
@@ -37,10 +37,17 @@ class TelyzerController:
     def cls(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
+    def log(self, text):
+        dt = self.get_datetime()
+        file_path = f"{self.cf.system_logs}log_{dt['log_name']}.txt"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"[{dt['file_name']}] {text}")
+
     def get_datetime(self):
         result = {}
         now = datetime.now()
         result.update({"file_name": now.strftime("%Y-%m-%d_%H-%M-%S")})
+        result.update({"log_name": now.strftime("%Y-%m-%d")})
         result.update({"unix": str(int(now.timestamp()))})
         return result
 
@@ -100,10 +107,15 @@ class TelyzerController:
                     self.cls()
 
                 case "4":
-                    selected_file = self.chat_visualization()
-                    if selected_file:
-                        self.plot_chat(selected_file)
-                    self.cls()
+                    try:
+                        selected_file = self.chat_visualization()
+                        if selected_file:
+                            self.plot_chat(selected_file)
+                        self.cls()
+                    except Exception as e:
+                        self.log(f"Error in chat visualization: {str(e)}")
+                        print(f"Error: {str(e)}")
+                        input("Press Enter to continue...")
 
                 case "b":
                     break
@@ -456,7 +468,8 @@ class TelyzerController:
             input("Press Enter to continue...")
             return
         
-        self.plot_chat(selected_file)
+        return selected_file
+
 
 
     def plot_chat(self, csv_path):
