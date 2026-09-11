@@ -9,7 +9,7 @@ class Config:
         self.ta = None
         self.api_id = ""
         self.api_hash = ""
-        self.app_version = "(Beta) vC82-2609"
+        self.app_version = "(Beta) vC89-2609"
         self.session_path = r"C:\telyzer\session\telyzer"
         os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
 
