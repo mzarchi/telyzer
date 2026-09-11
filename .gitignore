@@ -4,5 +4,5 @@ dist/
 __pycache__/
 
 *.spec
-config.py
 ready-commands.txt
+.env

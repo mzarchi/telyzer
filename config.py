@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Config:
@@ -7,9 +10,9 @@ class Config:
 
     def app_init(self):
         self.ta = None
-        self.api_id = ""
-        self.api_hash = ""
-        self.app_version = "(Beta) vC70-2609"
+        self.api_id = os.getenv("api_id")
+        self.api_hash = os.getenv("api_hash")
+        self.app_version = os.getenv("app_version")
         self.session_path = r"C:\telyzer\session\telyzer"
         os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
 
