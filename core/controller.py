@@ -1,5 +1,6 @@
 from telethon.tl.functions.contacts import GetContactsRequest
 import matplotlib.pyplot as plt
+from collections import Counter
 from datetime import datetime
 from config import Config
 from math import ceil
@@ -10,7 +11,6 @@ import pytz
 import glob
 import csv
 import os
-
 
 
 class TelyzerController:
@@ -82,19 +82,26 @@ class TelyzerController:
             user_choose = input(msg.msg_contacts)
             match user_choose:
                 case "1":
-                    self.contacts_list()
+                    target = input("Enter username: ")
+                    self.user_lookup(target)
                     self.cls()
 
                 case "2":
+                    self.contacts_list()
+                    self.cls()
+
+                case "3":
                     target = input("Enter target username: ")
                     self.chat_stream(target)
                     self.cls()
 
-                case "3":
-                    self.chat_visualization()
+                case "4":
+                    selected_file = self.explore_chat_files()
+                    if selected_file:
+                        self.plot_chat(selected_file)
                     self.cls()
 
-                case "4":
+                case "5":
                     break
 
     def contacts_list(self):
@@ -113,7 +120,7 @@ class TelyzerController:
 
         contacts.sort(key=lambda c: (c.first_name or '').lower())
 
-        file_path = f"{self.cf.contacts_lists}Contacts_{dt['file_name']}.csv"
+        file_path = f"{self.cf.contact_lists}Contacts_{dt['file_name']}.csv"
 
         fieldnames = [
             "row_number",
@@ -284,7 +291,6 @@ class TelyzerController:
                     else:
                         print("Starting from beginning...")
 
-            # محاسبه تعداد پیام‌های جدید
             total_new = 0
             if start_from_id > 0:
                 all_messages = await self.cf.ta.client.get_messages(
@@ -450,6 +456,7 @@ class TelyzerController:
     def plot_chat(self, csv_path):
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
+        df["sender_id"] = int(df["sender_id"])
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
         
         iran_tz = pytz.timezone("Asia/Tehran")
@@ -534,12 +541,14 @@ class TelyzerController:
         me = self.get_me()
         my_user_id = me.id
         target_group = target_group.replace("@", "")
+        if target_group.lstrip("-").isdigit():
+            target_group = int(target_group)
+            
         dt = self.get_datetime()
 
         async def _stream():
             entity = await self.cf.ta.client.get_entity(target_group)
 
-            # تشخیص گروه بودن
             if not (hasattr(entity, 'megagroup') or hasattr(entity, 'title')):
                 print("This is not a group!")
                 return
@@ -548,9 +557,9 @@ class TelyzerController:
             group_folder = f"{self.cf.group_csv}{group_id}/"
             os.makedirs(group_folder, exist_ok=True)
 
-            output_csv = f"{group_folder}{group_id}-{my_user_id}-{dt['file_name']}.csv"
+            output_csv = f"{group_folder}{group_id}-{dt['file_name']}.csv"
 
-            pattern = f"{group_folder}{group_id}-{my_user_id}-*.csv"
+            pattern = f"{group_folder}{group_id}-*.csv"
             existing_files = glob.glob(pattern)
 
             start_from_id = 0
@@ -754,12 +763,6 @@ class TelyzerController:
 
 
     def plot_group(self, csv_path):
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        import pytz
-        from datetime import datetime
-        from collections import Counter
-
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
@@ -776,12 +779,14 @@ class TelyzerController:
 
         names = csv_name.split("-")
         group_id = names[0]
+        group_id_val = group_id
+        if str(group_id).lstrip("-").isdigit():
+            group_id_val = int(group_id)
 
-        # شمردن پیام‌های هر فرستنده
         sender_counts = Counter(df["sender_id"])
         top_senders = [sender for sender, _ in sender_counts.most_common(5)]
 
-        print(f"Group ID: {group_id}")
+        print(f"Group ID: {group_id_val}")
         print(f"Total messages: {len(df)}")
         print(f"Total senders: {len(sender_counts)}")
         print(f"\nTop 5 active members:")
@@ -793,10 +798,8 @@ class TelyzerController:
 
         plt.figure(figsize=(10, 5))
 
-        # رنگ‌های مختلف برای ۵ نفر برتر
         colors = ["#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd"]
 
-        # اول بقیه رو خاکستری کمرنگ بکش
         other_df = df[~df["sender_id"].isin(top_senders)]
         if not other_df.empty:
             plt.scatter(
@@ -808,7 +811,6 @@ class TelyzerController:
                 label=f"Others ({len(other_df)})"
             )
 
-        # بعد ۵ نفر برتر رو رنگ کن
         for idx, sender_id in enumerate(top_senders):
             sender_df = df[df["sender_id"] == sender_id]
             plt.scatter(
@@ -828,10 +830,80 @@ class TelyzerController:
         plt.legend(loc='best', fontsize=8)
 
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
-        plt.title(f"Group Activity Distribution - {group_id}")
+        async def _get_group_name():
+            try:
+                entity = await self.cf.ta.client.get_entity(group_id_val)
+                return entity.title
+            except:
+                return group_id
+
+        group_name = self.loop.run_until_complete(_get_group_name())
+        plt.title(f"Group Activity Distribution - {group_name}")
         
         output_image = f"{images_folder}group-{group_id}-{today_dt}.jpg"
         plt.savefig(output_image, dpi=300)
         plt.show()
 
         print(f"\nPlot saved to: {output_image}")
+
+    def user_lookup(self, target_user):
+        target_user = target_user.replace("@", "")
+        
+        async def _lookup():
+            try:
+                entity = await self.cf.ta.client.get_entity(target_user)
+                
+                name = f"{entity.first_name or ''} {entity.last_name or ''}".strip()
+                username = f"@{entity.username}" if entity.username else "None"
+                phone = entity.phone or "Hidden"
+                user_id = entity.id
+                lang_code = entity.lang_code or "None"
+                
+                status = "No status"
+                if entity.status:
+                    from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
+                    if isinstance(entity.status, UserStatusOnline):
+                        status = "Online"
+                    elif isinstance(entity.status, UserStatusOffline):
+                        status = f"Offline (last seen: {entity.status.was_online})"
+                    elif isinstance(entity.status, UserStatusRecently):
+                        status = "Recently"
+                    elif isinstance(entity.status, UserStatusLastWeek):
+                        status = "Last week"
+                    elif isinstance(entity.status, UserStatusLastMonth):
+                        status = "Last month"
+                    else:
+                        status = str(entity.status)
+                
+                from telethon.tl.functions.users import GetFullUserRequest
+                full = await self.cf.ta.client(GetFullUserRequest(entity.id))
+                bio = ""
+                if hasattr(full, 'full_user') and full.full_user.about:
+                    bio = full.full_user.about
+                
+                print("User Lookup Result:")
+                print("-" * 50)
+                print(f"Name:          {name}")
+                print(f"Username:      {username}")
+                print(f"ID:            {user_id}")
+                print(f"Phone:         {phone}")
+                print(f"Lang Code:     {lang_code}")
+                print(f"Status:        {status}")
+                print(f"Bio:           {bio}")
+                print(f"Bot:           {'Yes' if entity.bot else 'No'}")
+                print(f"Verified:      {'Yes' if entity.verified else 'No'}")
+                print(f"Premium:       {'Yes' if entity.premium else 'No'}")
+                print(f"Scam:          {'Yes' if entity.scam else 'No'}")
+                print(f"Fake:          {'Yes' if entity.fake else 'No'}")
+                print(f"Restricted:    {'Yes' if entity.restricted else 'No'}")
+                print(f"Deleted:       {'Yes' if entity.deleted else 'No'}")
+                print(f"Contact:       {'Yes' if entity.contact else 'No'}")
+                print(f"Mutual:        {'Yes' if entity.mutual_contact else 'No'}")
+                print(f"Photo ID:      {entity.photo.photo_id if entity.photo else 'No photo'}")
+                print("-" * 50)
+                
+            except Exception as e:
+                print(f"Error: {e}")
+        
+        self.loop.run_until_complete(_lookup())
+        input("Press Enter to continue...")
