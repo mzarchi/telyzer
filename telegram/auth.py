@@ -33,7 +33,7 @@ class TelegramAuth:
             print("Your session is active")
             return True
 
-        phone = input("Your Phone Number: ")
+        phone = input("Your Phone Number (e.g., +1234567890): ")
         await self.client.send_code_request(phone)
 
         code = input("Enter Login Code: ")
