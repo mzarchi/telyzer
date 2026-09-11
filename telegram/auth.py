@@ -28,7 +28,7 @@ class TelegramAuth:
     async def login(self):
         await self._create_client()
         await self.client.connect()
-        
+
         if await self.client.is_user_authorized():
             print("Your session is active")
             return True

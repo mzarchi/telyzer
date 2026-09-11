@@ -22,7 +22,6 @@ class Config:
         self.group_csv = f"{app_root}Groups-CSV/"
         self.chat_images = f"{app_root}Chats-Images/"
 
-
         self.mk = [
             self.contact_lists,
             self.chat_csv,
