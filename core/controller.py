@@ -83,7 +83,22 @@ class TelyzerController:
     def disconnect(self):
         if self.cf.ta and self.cf.ta.client:
             try:
-                self.loop.run_until_complete(self.cf.ta.client.disconnect())
+                async def _cleanup():
+                    await self.cf.ta.client.disconnect()
+                    await asyncio.sleep(0.3)
+
+                self.loop.run_until_complete(_cleanup())
+
+                pending = asyncio.all_tasks(self.loop)
+                for task in pending:
+                    task.cancel()
+
+                if pending:
+                    self.loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
+
+                self.loop.close()
             except:
                 pass
 
@@ -104,6 +119,9 @@ class TelyzerController:
                 case "3":
                     target = input("Enter target username: ")
                     self.chat_stream(target)
+                    selected_file = self.chat_visualization()
+                    if selected_file:
+                        self.plot_chat(selected_file)
                     self.cls()
 
                 case "4":
@@ -411,7 +429,7 @@ class TelyzerController:
                     print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
 
         self.loop.run_until_complete(_stream())
-        input("Press Enter to continue...")
+        input("Press Enter to show plot ...")
         
     def chat_visualization(self):
         self.cls()

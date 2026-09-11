@@ -1,3 +1,5 @@
+import sys
+
 from core.controller import TelyzerController
 import messages as msg
 
@@ -19,7 +21,7 @@ def main():
             input_user_choose = input(menu)
             if input_user_choose == "e":
                 tc.disconnect()
-                break
+                sys.exit(0)
 
             match input_user_choose:
                 case "1":
