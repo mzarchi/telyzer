@@ -39,14 +39,15 @@ def main():
     try:
         while True:
             tc.cls()
-            menu = msg.msg_main
+            menu = msg.msg_main.replace("{version}", tc.cf.app_version)
             if tc.cf.ta and tc.cf.ta.client:
                 is_active = tc.is_session_active()
                 if is_active:
                     me = tc.get_me()
                     if me:
                         username = me.username or me.first_name
-                        menu = msg.msg_main.replace("1. Telegram Login", f"1. Session of @{username} is active - Logout")
+                        menu = msg.msg_main.replace("{version}", tc.cf.app_version)
+                        menu = menu.replace("1. Telegram Login", f"1. Session of @{username} is active - Logout")
 
             input_user_choose = input(menu)
             if input_user_choose == "e":

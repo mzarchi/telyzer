@@ -1,3 +1,4 @@
+from config import Config
 import matplotlib
 matplotlib.use('TkAgg')
 matplotlib.rcParams['font.family'] = ['Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
@@ -9,7 +10,6 @@ from matplotlib.ticker import MultipleLocator, FixedLocator
 from telegram.auth import TelegramAuth
 from collections import Counter
 from datetime import datetime
-from config import Config
 from math import ceil
 
 import messages as msg

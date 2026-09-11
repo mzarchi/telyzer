@@ -1,4 +1,5 @@
-msg_main = """Please Select one of this option:
+msg_main = """Telyzer version: {version}
+Please Select one of this option:
     1. Telegram Login
     2. Contacts Menu
     3. Groups Menu
