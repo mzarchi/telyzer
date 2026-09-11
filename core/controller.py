@@ -2,8 +2,11 @@ import matplotlib
 matplotlib.use('TkAgg')
 matplotlib.rcParams['font.family'] = ['Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
 import matplotlib.pyplot as plt
+from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
 from telethon.tl.functions.contacts import GetContactsRequest
+from telethon.tl.functions.users import GetFullUserRequest
 from matplotlib.ticker import MultipleLocator, FixedLocator
+from telegram.auth import TelegramAuth
 from collections import Counter
 from datetime import datetime
 from config import Config
@@ -13,9 +16,11 @@ import messages as msg
 import pandas as pd
 import requests
 import asyncio
+import shutil
 import pytz
 import glob
 import csv
+import sys
 import os
 
 
@@ -25,7 +30,6 @@ class TelyzerController:
     def __init__(self):
         self.cf = Config()
         if self.cf.ta is None:
-            from telegram.auth import TelegramAuth
             self.cf.ta = TelegramAuth(
                 self.cf.session_path,
                 self.cf.api_id,
@@ -205,7 +209,6 @@ class TelyzerController:
 
                 status = "No status"
                 if contact.status:
-                    from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
                     if isinstance(contact.status, UserStatusOnline):
                         status = "Online"
                     elif isinstance(contact.status, UserStatusOffline):
@@ -342,7 +345,6 @@ class TelyzerController:
                 total_new = all_messages.total
 
             if append_mode and old_file_path:
-                import shutil
                 shutil.copy2(old_file_path, output_csv)
                 os.remove(old_file_path)
                 print(f"Copied previous file to: {os.path.basename(output_csv)}")
@@ -660,7 +662,6 @@ class TelyzerController:
                 total_new = all_messages.total
 
             if append_mode and old_file_path:
-                import shutil
                 shutil.copy2(old_file_path, output_csv)
                 os.remove(old_file_path)
                 print(f"Copied previous file to: {os.path.basename(output_csv)}")
@@ -921,7 +922,6 @@ class TelyzerController:
                 
                 status = "No status"
                 if entity.status:
-                    from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
                     if isinstance(entity.status, UserStatusOnline):
                         status = "Online"
                     elif isinstance(entity.status, UserStatusOffline):
@@ -935,7 +935,6 @@ class TelyzerController:
                     else:
                         status = str(entity.status)
                 
-                from telethon.tl.functions.users import GetFullUserRequest
                 full = await self.cf.ta.client(GetFullUserRequest(entity.id))
                 bio = ""
                 if hasattr(full, 'full_user') and full.full_user.about:
@@ -1011,3 +1010,163 @@ class TelyzerController:
             print(f"Error: {e}")
 
         input("\nPress Enter to continue...")
+
+    def check_for_update(self):
+        update_url = "https://api.github.com/repos/mzarchi/telyzer/releases/latest"
+
+        try:
+            print("Checking for updates...")
+            response = requests.get(update_url, timeout=10)
+
+            if response.status_code == 404:
+                print("No releases found on GitHub!")
+                input("Press Enter to continue...")
+                return
+
+            if response.status_code != 200:
+                print(f"Error: Cannot connect to GitHub (Status: {response.status_code})")
+                input("Press Enter to continue...")
+                return
+
+            data = response.json()
+
+            if "tag_name" not in data:
+                print("Invalid release data!")
+                input("Press Enter to continue...")
+                return
+
+            latest_version = data["tag_name"]
+            release_name = data.get("name", latest_version)
+            release_notes = data.get("body", "No release notes")
+
+            assets = data.get("assets", [])
+            if not assets:
+                print("No downloadable file found in this release!")
+                input("Press Enter to continue...")
+                return
+
+            download_url = None
+            file_name = None
+            for asset in assets:
+                if asset["name"].endswith(".exe"):
+                    download_url = asset["browser_download_url"]
+                    file_name = asset["name"]
+                    break
+
+            if not download_url:
+                print("No .exe file found in this release!")
+                input("Press Enter to continue...")
+                return
+
+            current_version = self.cf.app_version
+
+            print(f"\nCurrent version: {current_version}")
+            print(f"Latest version:  {latest_version}")
+            print(f"Release name:    {release_name}")
+
+            if not self.compare_versions(current_version, latest_version):
+                print("\nYou are using the latest version!")
+                input("Press Enter to continue...")
+                return
+
+            print(f"\nNew version available: {latest_version}")
+            print(f"\nRelease notes:\n{release_notes}")
+
+            choice = input("\nDownload and install? (y/n): ")
+
+            if choice.lower() != "y":
+                print("Update cancelled.")
+                input("Press Enter to continue...")
+                return
+
+            current_exe = sys.executable
+            exe_dir = os.path.dirname(current_exe)
+            new_exe_path = os.path.join(exe_dir, "telyzer_update.exe")
+            bat_path = os.path.join(exe_dir, "update.bat")
+            backup_path = os.path.join(exe_dir, "telyzer_backup.exe")
+
+            print(f"\nDownloading {file_name}...")
+            try:
+                with requests.get(download_url, stream=True, timeout=30) as r:
+                    r.raise_for_status()
+                    total = int(r.headers.get("content-length", 0))
+                    downloaded = 0
+                    last_percent = -1
+
+                    with open(new_exe_path, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                if total > 0:
+                                    percent = int(downloaded / total * 100)
+                                    if percent != last_percent and percent % 5 == 0:
+                                        print(f"\rDownloading: {percent}% ({downloaded // 1024} KB / {total // 1024} KB)", end="")
+                                        last_percent = percent
+
+                print("\nDownload complete!")
+
+                if os.path.getsize(new_exe_path) < 1024:
+                    print("Downloaded file is too small. Download failed.")
+                    os.remove(new_exe_path)
+                    input("Press Enter to continue...")
+                    return
+
+                with open(bat_path, "w") as f:
+                    f.write(f"""@echo off
+    title Telyzer Updater
+    echo Updating Telyzer...
+
+    timeout /t 3 /nobreak > nul
+
+    echo Backing up current version...
+    move "{current_exe}" "{backup_path}"
+
+    echo Installing new version...
+    move "{new_exe_path}" "{current_exe}"
+
+    echo Starting new version...
+    start "" "{current_exe}"
+
+    echo Cleaning up...
+    timeout /t 5 /nobreak > nul
+    del "{backup_path}"
+
+    del "%~f0"
+    """)
+
+                print("\nRestarting to apply update...")
+                input("Press Enter to restart...")
+
+                os.startfile(bat_path)
+                os._exit(0)
+
+            except requests.exceptions.Timeout:
+                print("Download timeout! Please try again.")
+                if os.path.exists(new_exe_path):
+                    os.remove(new_exe_path)
+                input("Press Enter to continue...")
+
+            except requests.exceptions.RequestException as e:
+                print(f"Download failed: {e}")
+                if os.path.exists(new_exe_path):
+                    os.remove(new_exe_path)
+                input("Press Enter to continue...")
+
+        except requests.exceptions.Timeout:
+            print("Connection timeout! Check your internet.")
+            input("Press Enter to continue...")
+
+        except requests.exceptions.ConnectionError:
+            print("Cannot connect to GitHub! Check your internet.")
+            input("Press Enter to continue...")
+
+        except Exception as e:
+            print(f"Error: {e}")
+            input("Press Enter to continue...")
+
+
+    def compare_versions(self, current, latest):
+        current_num = int(current.split("vC")[1].split("-")[0])
+        latest_num = int(latest.split("vC")[1].split("-")[0])
+        return latest_num > current_num
