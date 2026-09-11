@@ -1061,8 +1061,7 @@ class TelyzerController:
             current_version = self.cf.app_version
 
             print(f"\nCurrent version: {current_version}")
-            print(f"Latest version:  {latest_version}")
-            print(f"Release name:    {release_name}")
+            print(f"Latest version:  {release_name}")
 
             if not self.compare_versions(current_version, latest_version):
                 print("\nYou are using the latest version!")
