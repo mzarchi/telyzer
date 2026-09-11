@@ -1,0 +1,31 @@
+import os
+
+
+class Config:
+    def __init__(self):
+        self.app_init()
+
+    def app_init(self):
+        self.ta = None
+        self.api_id = ""
+        self.api_hash = ""
+        self.app_version = "(Beta) vC70-2609"
+        self.session_path = r"C:\telyzer\session\telyzer"
+        os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
+
+        app_root = "C:/telyzer/"
+        self.contact_lists = f"{app_root}Contacts-List/"
+        self.chat_csv = f"{app_root}Chats-CSV/"
+        self.group_csv = f"{app_root}Groups-CSV/"
+        self.chat_images = f"{app_root}Chats-Images/"
+
+
+        self.mk = [
+            self.contact_lists,
+            self.chat_csv,
+            self.group_csv,
+            self.chat_images
+        ]
+
+        for i in self.mk:
+            os.makedirs(i, exist_ok=True)
