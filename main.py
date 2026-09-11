@@ -33,6 +33,9 @@ def main():
                 
             case "3":
                 tc.groups()
+                
+            case "d":
+                tc.developers()
 
 
 if __name__ == "__main__":

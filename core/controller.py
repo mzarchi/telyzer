@@ -4,8 +4,10 @@ from collections import Counter
 from datetime import datetime
 from config import Config
 from math import ceil
+
 import messages as msg
 import pandas as pd
+import requests
 import asyncio
 import pytz
 import glob
@@ -907,3 +909,47 @@ class TelyzerController:
         
         self.loop.run_until_complete(_lookup())
         input("Press Enter to continue...")
+
+    def developers(self):
+        self.cls()
+        url = "https://api.github.com/repos/mzarchi/telyzer/stats/contributors"
+
+        try:
+            response = requests.get(url)
+
+            if response.status_code == 202:
+                print("Stats are being computed. Please try again in a few seconds.")
+                input("Press Enter to continue...")
+                return
+
+            if response.status_code != 200:
+                print(f"Error: {response.status_code}")
+                input("Press Enter to continue...")
+                return
+
+            contributors = response.json()
+
+            if not contributors:
+                print("No contributors found.")
+                input("Press Enter to continue...")
+                return
+
+            total_commits = sum(c["total"] for c in contributors)
+
+            contributors.sort(key=lambda c: c["total"], reverse=True)
+
+            print("Telyzer Developers", end="")
+            print("-" * 42)
+            print(f"{'Rank':<6} {'Username':<20} {'Commits':<10} {'Share':<10}")
+            print("-" * 60)
+
+            for i, c in enumerate(contributors, 1):
+                login = c["author"]["login"] if c["author"] else "Unknown"
+                commits = c["total"]
+                percentage = (commits / total_commits) * 100
+                print(f"{i:<6} {login:<20} {commits:<10} {percentage:.1f}%")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+        input("\nPress Enter to continue...")
