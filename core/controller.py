@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('QtAgg')
+import matplotlib.pyplot as plt
 from telethon.tl.functions.contacts import GetContactsRequest
 import matplotlib.pyplot as plt
 from collections import Counter
@@ -98,7 +101,7 @@ class TelyzerController:
                     self.cls()
 
                 case "4":
-                    selected_file = self.explore_chat_files()
+                    selected_file = self.chat_visualization()
                     if selected_file:
                         self.plot_chat(selected_file)
                     self.cls()
@@ -458,7 +461,7 @@ class TelyzerController:
     def plot_chat(self, csv_path):
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
-        df["sender_id"] = int(df["sender_id"])
+        df["sender_id"] = df["sender_id"].astype("Int64")
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
         
         iran_tz = pytz.timezone("Asia/Tehran")
