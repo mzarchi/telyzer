@@ -12,13 +12,13 @@ msg_contacts = """Menu Options:
     2. Contacts List
     3. Chat Stream
     4. Chat Visualization
-    5. Back
+    b. Back
     
 Enter your choose: """
 
 msg_groups = """Groups Menu:
     1. Group Stream
     2. Group Visualization
-    3. Back
+    b. Back
     
 Enter your choose: """

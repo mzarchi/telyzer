@@ -105,10 +105,11 @@ class TelyzerController:
                         self.plot_chat(selected_file)
                     self.cls()
 
-                case "5":
+                case "b":
                     break
 
     def contacts_list(self):
+        self.cls()
         dt = self.get_datetime()
 
         async def _get_contacts():
@@ -247,6 +248,7 @@ class TelyzerController:
         return "unknown"
 
     def chat_stream(self, target_user):
+        self.cls()
         me = self.get_me()
         my_user_id = me.id
         target_user = target_user.replace("@", "")
@@ -458,6 +460,7 @@ class TelyzerController:
 
 
     def plot_chat(self, csv_path):
+        self.cls()
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
         df["sender_id"] = df["sender_id"].astype("Int64")
@@ -537,11 +540,12 @@ class TelyzerController:
                         self.plot_group(selected_file)
                     self.cls()
 
-                case "3":
+                case "b":
                     break
 
 
     def group_stream(self, target_group):
+        self.cls()
         me = self.get_me()
         my_user_id = me.id
         target_group = target_group.replace("@", "")
@@ -767,6 +771,7 @@ class TelyzerController:
 
 
     def plot_group(self, csv_path):
+        self.cls()
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
@@ -851,6 +856,7 @@ class TelyzerController:
         print(f"\nPlot saved to: {output_image}")
 
     def user_lookup(self, target_user):
+        self.cls()
         target_user = target_user.replace("@", "")
         
         async def _lookup():
