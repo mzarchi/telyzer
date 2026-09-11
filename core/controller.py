@@ -1,8 +1,7 @@
 import matplotlib
-matplotlib.use('QtAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from telethon.tl.functions.contacts import GetContactsRequest
-import matplotlib.pyplot as plt
 from collections import Counter
 from datetime import datetime
 from config import Config
