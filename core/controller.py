@@ -3,6 +3,7 @@ matplotlib.use('TkAgg')
 matplotlib.rcParams['font.family'] = ['Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
 import matplotlib.pyplot as plt
 from telethon.tl.functions.contacts import GetContactsRequest
+from matplotlib.ticker import MultipleLocator, FixedLocator
 from collections import Counter
 from datetime import datetime
 from config import Config
@@ -497,6 +498,7 @@ class TelyzerController:
         self.cls()
         csv_name = os.path.basename(csv_path)
         df = pd.read_csv(csv_path)
+        df = df.dropna(subset=["sender_id"])
         df["sender_id"] = df["sender_id"].astype("Int64")
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
         
@@ -544,9 +546,13 @@ class TelyzerController:
         
         plt.xlabel("Days from First Message")
         plt.ylabel("Hour of Day")
-        plt.ylim(0, 24)
+        plt.ylim(0, 25)
         
-        plt.grid(axis='y', linestyle='--', alpha=0.9)
+        plt.gca().yaxis.set_major_locator(FixedLocator([0, 5, 10, 15, 20]))
+        plt.gca().yaxis.set_minor_locator(MultipleLocator(1))
+
+        plt.grid(which='major', axis='y', linestyle='--', alpha=0.9) # every 5 hours
+        plt.grid(which='minor', axis='y', linestyle='--', alpha=0.5) # every 1 hour
         plt.legend()
         
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -877,7 +883,7 @@ class TelyzerController:
 
         plt.xlabel("Days from First Message")
         plt.ylabel("Hour of Day")
-        plt.ylim(0, 24)
+        plt.ylim(0, 25)
 
         plt.grid(axis='y', linestyle='--', alpha=0.9)
         plt.legend(loc='best', fontsize=8)

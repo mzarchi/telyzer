@@ -35,6 +35,9 @@ def main():
                     
                 case "3":
                     tc.groups()
+                
+                case "u":
+                    tc.check_for_update()
                     
                 case "d":
                     tc.developers()

@@ -2,6 +2,7 @@ msg_main = """Please Select one of this option:
     1. Telegram Login
     2. Contacts Menu
     3. Groups Menu
+    u. Check for Update
     d. Developers
     e. Exit
     
