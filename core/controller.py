@@ -342,7 +342,9 @@ class TelyzerController:
             if append_mode and old_file_path:
                 import shutil
                 shutil.copy2(old_file_path, output_csv)
+                os.remove(old_file_path)
                 print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(f"Removed old file: {os.path.basename(old_file_path)}")
 
             mode = "a" if append_mode else "w"
 
@@ -632,7 +634,6 @@ class TelyzerController:
                     else:
                         print("Starting from beginning...")
 
-            # محاسبه تعداد پیام‌های جدید
             if start_from_id > 0:
                 all_messages = await self.cf.ta.client.get_messages(
                     entity,
@@ -647,7 +648,9 @@ class TelyzerController:
             if append_mode and old_file_path:
                 import shutil
                 shutil.copy2(old_file_path, output_csv)
+                os.remove(old_file_path)
                 print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(f"Removed old file: {os.path.basename(old_file_path)}")
 
             mode = "a" if append_mode else "w"
 

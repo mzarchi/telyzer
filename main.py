@@ -5,8 +5,8 @@ import messages as msg
 
 
 def main():
+    tc = TelyzerController()
     try:
-        tc = TelyzerController()
         while True:
             tc.cls()
             menu = msg.msg_main
@@ -38,6 +38,7 @@ def main():
                     
                 case "d":
                     tc.developers()
+                    
     except Exception as e:
         tc.log(f"Error: {str(e)}")
         pass
