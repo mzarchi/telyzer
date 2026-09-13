@@ -1186,12 +1186,29 @@ class TelyzerController:
                         self.plot_channel(selected_file)
                     self.cls()
 
+                case "3":
+                    selected_file = self.explore_channel_files()
+                    if selected_file:
+                        self.plot_channel_views(selected_file)
+                    self.cls()
+
+                case "4":
+                    selected_file = self.explore_channel_files()
+                    if selected_file:
+                        self.plot_channel_forwards(selected_file)
+                    self.cls()
+
+                case "5":
+                    selected_file = self.explore_channel_files()
+                    if selected_file:
+                        self.plot_channel_comments(selected_file)
+                    self.cls()
+
                 case "b":
                     break
 
 
     def channel_stream(self, target_channel):
-        me = self.get_me()
         target_channel = target_channel.replace("@", "")
         if target_channel.lstrip("-").isdigit():
             target_channel = int(target_channel)
@@ -1543,9 +1560,9 @@ class TelyzerController:
         images_folder = f"{self.cf.chat_images}"
         os.makedirs(images_folder, exist_ok=True)
 
-        plt.figure(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(10, 5))
 
-        scatter = plt.scatter(
+        scatter = ax.scatter(
             df["days_from_start"],
             df["hour"],
             s=2,
@@ -1557,7 +1574,7 @@ class TelyzerController:
         msg_ids = df["message_id"].values
         msg_dates = df["publish_datetime"].values
 
-        cursor = mplcursors.cursor(scatter, hover=True)
+        cursor = mplcursors.cursor(scatter, multiple=True)
 
         @cursor.connect("add")
         def on_add(sel):
@@ -1568,7 +1585,12 @@ class TelyzerController:
             date_part = full_date[:10]
             time_part = full_date[11:19]
 
-            sel.annotation.set_text(f"Post ID: {msg_id}\nTime: {time_part}\nDate: {date_part}")
+            sel.annotation.set_text(
+                f"Post ID: {msg_id}\n"
+                f"Time: {time_part}\n"
+                f"Date: {date_part}\n"
+                f"Status: Alive"
+            )
             sel.annotation.get_bbox_patch().set(
                 facecolor="white",
                 edgecolor="black",
@@ -1577,10 +1599,11 @@ class TelyzerController:
             )
             sel.annotation.set_fontsize(9)
 
+        cursor_del = None
         if deleted_points:
             del_x = [p[0] for p in deleted_points]
             del_y = [p[1] for p in deleted_points]
-            scatter_del = plt.scatter(
+            scatter_del = ax.scatter(
                 del_x,
                 del_y,
                 s=2,
@@ -1589,33 +1612,80 @@ class TelyzerController:
                 label=f"Deleted ({len(deleted_points)})"
             )
 
-            cursor_del = mplcursors.cursor(scatter_del, hover=True)
+        cursor_del = mplcursors.cursor(scatter_del, multiple=True)
 
-            @cursor_del.connect("add")
-            def on_add_del(sel):
-                sel.annotation.set_text("Deleted message (estimated)")
-                sel.annotation.get_bbox_patch().set(
-                    facecolor="white",
-                    edgecolor="black",
-                    linewidth=1,
-                    alpha=1.0
-                )
-                sel.annotation.set_fontsize(9)
+        @cursor_del.connect("add")
+        def on_add_del(sel):
+            idx = sel.index
+            del_x_val = del_x[idx]
+            del_y_val = del_y[idx]
+            
+            prev_msg = df_sorted[df_sorted["days_from_start"] <= del_x_val].iloc[-1] if len(df_sorted[df_sorted["days_from_start"] <= del_x_val]) > 0 else None
+            next_msg = df_sorted[df_sorted["days_from_start"] >= del_x_val].iloc[0] if len(df_sorted[df_sorted["days_from_start"] >= del_x_val]) > 0 else None
+            
+            if prev_msg is not None and next_msg is not None:
+                prev_time = pd.to_datetime(prev_msg["publish_datetime"])
+                next_time = pd.to_datetime(next_msg["publish_datetime"])
+                avg_time = prev_time + (next_time - prev_time) / 2
+                date_part = avg_time.strftime("%Y-%m-%d")
+                time_part = avg_time.strftime("%H:%M:%S")
+            else:
+                date_part = "Unknown"
+                time_part = "Unknown"
+            
+            if prev_msg is not None and next_msg is not None:
+                prev_id = int(prev_msg["message_id"])
+                next_id = int(next_msg["message_id"])
+                gap = next_id - prev_id - 1
+                if gap > 0:
+                    ratio = (del_x_val - prev_msg["days_from_start"]) / (next_msg["days_from_start"] - prev_msg["days_from_start"]) if next_msg["days_from_start"] != prev_msg["days_from_start"] else 0
+                    est_id = int(prev_id + ratio * (next_id - prev_id))
+                else:
+                    est_id = prev_id
+            else:
+                est_id = "Unknown"
+            
+            sel.annotation.set_text(
+                f"Post ID: {est_id}\n"
+                f"Time: {time_part}\n"
+                f"Date: {date_part}\n"
+                f"Status: Deleted"
+            )
+            sel.annotation.get_bbox_patch().set(
+                facecolor="white",
+                edgecolor="black",
+                linewidth=1,
+                alpha=1.0
+            )
+            sel.annotation.set_fontsize(9)
 
-        plt.xlabel("Days elapsed since the first message")
-        plt.ylabel("Hour of the day")
-        plt.ylim(0, 25)
+        from matplotlib.backend_bases import MouseButton
 
-        plt.gca().yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
-        plt.gca().yaxis.set_minor_locator(MultipleLocator(1))
+        def on_click(event):
+            if event.button == MouseButton.RIGHT:
+                for sel in list(cursor.selections):
+                    cursor.remove_selection(sel)
+                if cursor_del:
+                    for sel in list(cursor_del.selections):
+                        cursor_del.remove_selection(sel)
+                fig.canvas.draw_idle()
 
-        plt.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
-        plt.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+        fig.canvas.mpl_connect("button_press_event", on_click)
 
-        plt.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
-        plt.gca().xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+        ax.set_xlabel("Days elapsed since the first message")
+        ax.set_ylabel("Hour of the day")
+        ax.set_ylim(0, 25)
 
-        plt.legend(loc='best', fontsize=8)
+        ax.yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
+        ax.yaxis.set_minor_locator(MultipleLocator(1))
+
+        ax.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+
+        ax.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+
+        ax.legend(loc='best', fontsize=8)
 
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -1643,6 +1713,128 @@ class TelyzerController:
         plt.tight_layout(rect=[0, 0.05, 1, 1])
 
         output_image = f"{images_folder}channel-{channel_id}-{today_dt}.jpg"
+        plt.savefig(output_image, dpi=300)
+        plt.show()
+
+        print(f"\nPlot saved to: {output_image}")
+
+    def plot_channel_views(self, csv_path):
+        self._plot_channel_metric(csv_path, "views", "Views", "#1f77b4")
+
+
+    def plot_channel_forwards(self, csv_path):
+        self._plot_channel_metric(csv_path, "forwards", "Forwards", "#9467bd")
+
+
+    def plot_channel_comments(self, csv_path):
+        self._plot_channel_metric(csv_path, "replies_count", "Comments", "#2ca02c")
+
+
+    def _plot_channel_metric(self, csv_path, metric_column, metric_label, line_color):
+        self.cls()
+        csv_name = os.path.basename(csv_path)
+        df = pd.read_csv(csv_path)
+        df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
+
+        iran_tz = pytz.timezone("Asia/Tehran")
+        df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
+
+        df = df.sort_values("message_id").reset_index(drop=True)
+
+        df[metric_column] = pd.to_numeric(df[metric_column], errors="coerce").fillna(0)
+
+        names = csv_name.split("-")
+        channel_id = names[0]
+        channel_id_val = channel_id
+        if str(channel_id).lstrip("-").isdigit():
+            channel_id_val = int(channel_id)
+
+        print(f"Channel ID: {channel_id_val}")
+        print(f"Total messages: {len(df)}")
+
+        images_folder = f"{self.cf.chat_images}"
+        os.makedirs(images_folder, exist_ok=True)
+
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        x = df["message_id"].values
+        y = df[metric_column].values
+
+        line, = ax.plot(x, y, color=line_color, linewidth=1.2)
+        ax.fill_between(x, y, alpha=0.15, color=line_color)
+
+        points = ax.scatter(x, y, s=15, color=line_color, alpha=0.01, picker=True)
+
+        ax.set_xlabel("Post ID")
+        ax.set_ylabel(metric_label)
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+        msg_ids = df["message_id"].values
+        msg_dates = df["publish_datetime"].values
+        msg_values = df[metric_column].values
+
+        cursor = mplcursors.cursor(points, multiple=True)
+
+        @cursor.connect("add")
+        def on_add(sel):
+            idx = sel.index
+            msg_id = msg_ids[idx]
+            full_date = str(msg_dates[idx])[:19]
+            value = msg_values[idx]
+
+            date_part = full_date[:10]
+            time_part = full_date[11:19]
+
+            sel.annotation.set_text(
+                f"Post ID: {msg_id}\n"
+                f"{metric_label}: {value}\n"
+                f"Time: {time_part}\n"
+                f"Date: {date_part}"
+            )
+            sel.annotation.get_bbox_patch().set(
+                facecolor="white",
+                edgecolor="black",
+                linewidth=1,
+                alpha=1.0
+            )
+            sel.annotation.set_fontsize(9)
+
+        from matplotlib.backend_bases import MouseButton
+
+        def on_click(event):
+            if event.button == MouseButton.RIGHT:
+                for sel in list(cursor.selections):
+                    cursor.remove_selection(sel)
+                fig.canvas.draw_idle()
+
+        fig.canvas.mpl_connect("button_press_event", on_click)
+
+        today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        async def _get_channel_name():
+            try:
+                entity = await self.cf.ta.client.get_entity(channel_id_val)
+                return entity.title, entity.username
+            except:
+                return "", ""
+
+        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+
+        plt.title(f"Channel {metric_label} Timeline", fontsize=16, fontweight='bold')
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if channel_username:
+            footer = f"Created by Telyzer at {now_str}  |  @{channel_username}"
+        elif channel_name:
+            footer = f"Created by Telyzer at {now_str}  |  {channel_name}"
+        else:
+            footer = f"Created by Telyzer at {now_str}  |  Channel ID: {channel_id_val}"
+
+        plt.figtext(0.5, 0.01, footer, ha='center', fontsize=11, color='gray')
+
+        plt.tight_layout(rect=[0, 0.05, 1, 1])
+
+        output_image = f"{images_folder}channel-{channel_id}-{metric_column}-{today_dt}.jpg"
         plt.savefig(output_image, dpi=300)
         plt.show()
 

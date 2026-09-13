@@ -28,7 +28,10 @@ Enter your choose: """
 
 msg_channels = """Channels Menu:
     1. Channel Stream
-    2. Channel Visualization
+    2. Channel Scatter Plot
+    3. Channel Posts View Plot
+    4. Channel Posts Forward Plot
+    5. Channel Posts Comment Plot
     b. Back
     
 Enter your choose: """
