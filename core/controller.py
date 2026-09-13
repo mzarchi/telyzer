@@ -1169,3 +1169,345 @@ class TelyzerController:
         current_num = int(current.split("vC")[1].split("-")[0])
         latest_num = int(latest.split("vC")[1].split("-")[0])
         return latest_num > current_num
+
+    def channels(self):
+        self.cls()
+        while True:
+            user_choose = input(msg.msg_channels)
+            match user_choose:
+                case "1":
+                    target = input("Enter channel username: ")
+                    self.channel_stream(target)
+
+                case "2":
+                    selected_file = self.explore_channel_files()
+                    if selected_file:
+                        self.plot_channel(selected_file)
+                    self.cls()
+
+                case "b":
+                    break
+
+
+    def channel_stream(self, target_channel):
+        me = self.get_me()
+        target_channel = target_channel.replace("@", "")
+        if target_channel.lstrip("-").isdigit():
+            target_channel = int(target_channel)
+
+        dt = self.get_datetime()
+
+        async def _stream():
+            if isinstance(target_channel, int):
+                entity = None
+                async for dialog in self.cf.ta.client.iter_dialogs():
+                    if dialog.entity.id == abs(target_channel):
+                        entity = dialog.entity
+                        break
+                if entity is None:
+                    print("Channel not found in your dialogs!")
+                    return
+            else:
+                entity = await self.cf.ta.client.get_entity(target_channel)
+
+            if not (hasattr(entity, 'broadcast') or hasattr(entity, 'title')):
+                print("This is not a channel!")
+                return
+
+            channel_id = entity.id
+            channel_folder = f"{self.cf.channel_csv}{channel_id}/"
+            os.makedirs(channel_folder, exist_ok=True)
+
+            output_csv = f"{channel_folder}{channel_id}-{dt['file_name']}.csv"
+
+            pattern = f"{channel_folder}{channel_id}-*.csv"
+            existing_files = glob.glob(pattern)
+
+            start_from_id = 0
+            old_file_path = None
+            append_mode = False
+
+            if existing_files:
+                old_file_path = max(existing_files, key=os.path.getsize)
+
+                max_msg_id = 0
+                with open(old_file_path, "r", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        try:
+                            msg_id = int(row["message_id"])
+                            if msg_id > max_msg_id:
+                                max_msg_id = msg_id
+                        except:
+                            pass
+
+                if max_msg_id > 0:
+                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(f"File size: {os.path.getsize(old_file_path)} bytes")
+                    print(f"Last message ID: {max_msg_id}")
+                    user_choice = input("Get only newer messages? (y/n): ")
+
+                    if user_choice.lower() == "y":
+                        start_from_id = max_msg_id
+                        append_mode = True
+                        print(f"Continuing from message ID: {start_from_id}")
+                    else:
+                        print("Starting from beginning...")
+
+            if start_from_id > 0:
+                all_messages = await self.cf.ta.client.get_messages(
+                    entity,
+                    min_id=start_from_id,
+                    limit=0
+                )
+                total_new = all_messages.total
+            else:
+                all_messages = await self.cf.ta.client.get_messages(entity, limit=0)
+                total_new = all_messages.total
+
+            if append_mode and old_file_path:
+                shutil.copy2(old_file_path, output_csv)
+                os.remove(old_file_path)
+                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(f"Removed old file: {os.path.basename(old_file_path)}")
+
+            mode = "a" if append_mode else "w"
+
+            with open(output_csv, mode=mode, encoding="utf-8", newline="") as csvfile:
+                fieldnames = [
+                    "row_number", "message_id", "publish_timestamp", "publish_datetime",
+                    "edit_datetime", "sender_id", "is_outgoing", "message_type",
+                    "message_text", "message_edited", "from_schedule", "via_bot_id",
+                    "reply_to_msg_id", "forward_from_id", "forward_from_name", "forward_date",
+                    "views", "forwards", "reactions_count", "replies_count",
+                    "has_media", "media_type", "grouped_id", "post_author",
+                    "post", "pinned", "silent", "mentioned"
+                ]
+
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                if append_mode:
+                    count = 0
+                    with open(output_csv, "r", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            count += 1
+                    count += 1
+                    print(f"Previous messages: {count - 1}")
+                else:
+                    writer.writeheader()
+                    count = 1
+
+                last_rows = []
+                new_count = 0
+
+                async for msg in self.cf.ta.client.iter_messages(
+                    entity,
+                    min_id=start_from_id if start_from_id else 0,
+                    limit=None,
+                    reverse=True):
+                    
+                    message_data = {
+                        "row_number": count,
+                        "message_id": msg.id,
+                        "publish_timestamp": int(msg.date.timestamp()),
+                        "publish_datetime": msg.date.isoformat(),
+                        "edit_datetime": msg.edit_date.isoformat() if msg.edit_date else "",
+                        "sender_id": msg.sender_id,
+                        "is_outgoing": msg.out,
+                        "message_type": self.detect_message_type(msg),
+                        "message_text": msg.raw_text,
+                        "message_edited": msg.edit_date is not None,
+                        "from_schedule": getattr(msg, "from_schedule", False),
+                        "via_bot_id": msg.via_bot_id if msg.via_bot_id else "",
+                        "reply_to_msg_id": msg.reply_to.reply_to_msg_id if msg.reply_to else "",
+                        "forward_from_id": msg.forward.from_id if msg.forward else "",
+                        "forward_from_name": msg.forward.from_name if msg.forward else "",
+                        "forward_date": msg.forward.date.isoformat() if msg.forward and msg.forward.date else "",
+                        "views": msg.views if hasattr(msg, "views") and msg.views else "",
+                        "forwards": msg.forwards if hasattr(msg, "forwards") and msg.forwards else "",
+                        "reactions_count": sum(r.count for r in msg.reactions.results) if msg.reactions else 0,
+                        "replies_count": msg.replies.replies if msg.replies else 0,
+                        "has_media": bool(msg.media),
+                        "media_type": type(msg.media).__name__ if msg.media else "",
+                        "grouped_id": msg.grouped_id if msg.grouped_id else "",
+                        "post_author": msg.post_author if hasattr(msg, "post_author") and msg.post_author else "",
+                        "post": msg.post if hasattr(msg, "post") else False,
+                        "pinned": msg.pinned if hasattr(msg, "pinned") else False,
+                        "silent": msg.silent if hasattr(msg, "silent") else False,
+                        "mentioned": msg.mentioned if hasattr(msg, "mentioned") else False,
+                    }
+                    writer.writerow(message_data)
+
+                    last_rows.append([
+                        count,
+                        message_data["message_id"],
+                        message_data["publish_timestamp"],
+                        message_data["publish_datetime"],
+                        message_data["sender_id"],
+                        message_data["is_outgoing"]
+                    ])
+
+                    count += 1
+                    new_count += 1
+
+                    if total_new > 0:
+                        percent = ceil(new_count / total_new * 100)
+                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+                    else:
+                        print(f"\rReading new messages: {new_count}", end="")
+
+            print(f"\nChannel stream saved to: {output_csv}")
+
+            if new_count == 0:
+                print("No new messages found!")
+            else:
+                print("\nLast 5 messages:")
+                print("-" * 80)
+                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print("-" * 80)
+
+                for row in last_rows[-5:]:
+                    row_num, msg_id, ts, dt_str, sender_id, is_out = row
+                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+
+        self.loop.run_until_complete(_stream())
+        input("Press Enter to continue...")
+
+
+    def explore_channel_files(self):
+        self.cls()
+
+        if not os.path.exists(self.cf.channel_csv):
+            print("No channel CSV folder found!")
+            input("Press Enter to continue...")
+            return None
+
+        channel_folders = [f for f in os.listdir(self.cf.channel_csv) if os.path.isdir(os.path.join(self.cf.channel_csv, f))]
+
+        if not channel_folders:
+            print("No channel folders found!")
+            input("Press Enter to continue...")
+            return None
+
+        print("Channel folders:")
+        for i, folder in enumerate(channel_folders, 1):
+            folder_path = os.path.join(self.cf.channel_csv, folder)
+            csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+            print(f"{i}. {folder} ({len(csv_files)} CSV files)")
+
+        folder_choice = input("\nSelect folder number (or 'b' to back): ")
+        if folder_choice.lower() == "b":
+            return None
+
+        try:
+            folder_idx = int(folder_choice) - 1
+            selected_folder = channel_folders[folder_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return None
+
+        folder_path = os.path.join(self.cf.channel_csv, selected_folder)
+        csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+
+        if not csv_files:
+            print("No CSV files in this folder!")
+            input("Press Enter to continue...")
+            return None
+
+        csv_files.sort(key=os.path.getsize, reverse=True)
+
+        print(f"\nCSV files in {selected_folder}:")
+        for i, file in enumerate(csv_files, 1):
+            file_name = os.path.basename(file)
+            file_size = os.path.getsize(file) / 1024
+            print(f"{i}. {file_name} ({file_size:.1f} KB)")
+
+        file_choice = input("\nSelect file number (or 'b' to back): ")
+        if file_choice.lower() == "b":
+            return None
+
+        try:
+            file_idx = int(file_choice) - 1
+            selected_file = csv_files[file_idx]
+        except:
+            print("Invalid choice!")
+            input("Press Enter to continue...")
+            return None
+
+        return selected_file
+
+
+    def plot_channel(self, csv_path):
+        self.cls()
+        csv_name = os.path.basename(csv_path)
+        df = pd.read_csv(csv_path)
+        df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
+
+        iran_tz = pytz.timezone("Asia/Tehran")
+        df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
+
+        df = df.sort_values("publish_datetime")
+        df["hour"] = (df["publish_datetime"].dt.hour +
+                    df["publish_datetime"].dt.minute / 60)
+        start_date = df["publish_datetime"].min()
+        df["days_from_start"] = (
+            (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
+
+        names = csv_name.split("-")
+        channel_id = names[0]
+        channel_id_val = channel_id
+        if str(channel_id).lstrip("-").isdigit():
+            channel_id_val = int(channel_id)
+
+        print(f"Channel ID: {channel_id_val}")
+        print(f"Total messages: {len(df)}")
+
+        images_folder = f"{self.cf.chat_images}"
+        os.makedirs(images_folder, exist_ok=True)
+
+        plt.figure(figsize=(10, 5))
+
+        plt.scatter(
+            df["days_from_start"],
+            df["hour"],
+            s=2,
+            alpha=0.6,
+            color="#1f77b4"
+        )
+
+        plt.xlabel("Days from First Message")
+        plt.ylabel("Hour of Day")
+        plt.ylim(0, 24)
+
+        # محور y
+        plt.gca().yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
+        plt.gca().yaxis.set_minor_locator(MultipleLocator(1))
+
+        plt.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
+        plt.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+
+        plt.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
+        plt.gca().xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+
+        today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        async def _get_channel_name():
+            try:
+                entity = await self.cf.ta.client.get_entity(channel_id_val)
+                return entity.title
+            except:
+                return ""
+
+        channel_name = self.loop.run_until_complete(_get_channel_name())
+        if channel_name:
+            plt.title(f"Channel Activity Distribution - {channel_name}")
+        else:
+            plt.title("Channel Activity Distribution")
+
+        output_image = f"{images_folder}channel-{channel_id}-{today_dt}.jpg"
+        plt.savefig(output_image, dpi=300)
+        plt.show()
+
+        print(f"\nPlot saved to: {output_image}")

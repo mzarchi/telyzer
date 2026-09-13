@@ -1,8 +1,9 @@
-msg_main = """Telyzer version: {version}
+msg_main = """Telyzer {version}
 Please Select one of this option:
     1. Telegram Login
     2. Contacts Menu
     3. Groups Menu
+    4. Channels Menu
     u. Check for Update
     d. Developers
     e. Exit
@@ -21,6 +22,13 @@ Enter your choose: """
 msg_groups = """Groups Menu:
     1. Group Stream
     2. Group Visualization
+    b. Back
+    
+Enter your choose: """
+
+msg_channels = """Channels Menu:
+    1. Channel Stream
+    2. Channel Visualization
     b. Back
     
 Enter your choose: """

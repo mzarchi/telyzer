@@ -2,6 +2,7 @@ import threading
 import time
 import os
 import sys
+from unittest import case
 
 loading_done = False
 tc = None
@@ -66,6 +67,9 @@ def main():
 
                 case "3":
                     tc.groups()
+                    
+                case "4":
+                    tc.channels()
 
                 case "u":
                     tc.check_for_update()
