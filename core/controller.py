@@ -13,6 +13,7 @@ from datetime import datetime
 from math import ceil
 
 import messages as msg
+import mplcursors
 import pandas as pd
 import requests
 import asyncio
@@ -1455,6 +1456,26 @@ class TelyzerController:
         df["days_from_start"] = (
             (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
 
+        df_sorted = df.sort_values("message_id").reset_index(drop=True)
+
+        deleted_points = []
+        for i in range(len(df_sorted) - 1):
+            curr_id = int(df_sorted.loc[i, "message_id"])
+            next_id = int(df_sorted.loc[i + 1, "message_id"])
+            gap = next_id - curr_id - 1
+
+            if gap > 0:
+                curr_time = df_sorted.loc[i, "days_from_start"]
+                next_time = df_sorted.loc[i + 1, "days_from_start"]
+                curr_hour = df_sorted.loc[i, "hour"]
+                next_hour = df_sorted.loc[i + 1, "hour"]
+
+                for j in range(1, gap + 1):
+                    ratio = j / (gap + 1)
+                    fake_time = curr_time + (next_time - curr_time) * ratio
+                    fake_hour = curr_hour + (next_hour - curr_hour) * ratio
+                    deleted_points.append((fake_time, fake_hour))
+
         names = csv_name.split("-")
         channel_id = names[0]
         channel_id_val = channel_id
@@ -1463,25 +1484,74 @@ class TelyzerController:
 
         print(f"Channel ID: {channel_id_val}")
         print(f"Total messages: {len(df)}")
+        print(f"Estimated deleted messages: {len(deleted_points)}")
 
         images_folder = f"{self.cf.chat_images}"
         os.makedirs(images_folder, exist_ok=True)
 
         plt.figure(figsize=(10, 5))
 
-        plt.scatter(
+        scatter = plt.scatter(
             df["days_from_start"],
             df["hour"],
             s=2,
             alpha=0.6,
-            color="#1f77b4"
+            color="#1f77b4",
+            label=f"Alive ({len(df)})"
         )
 
-        plt.xlabel("Days from First Message")
-        plt.ylabel("Hour of Day")
-        plt.ylim(0, 24)
+        msg_ids = df["message_id"].values
+        msg_dates = df["publish_datetime"].values
 
-        # محور y
+        cursor = mplcursors.cursor(scatter, hover=True)
+
+        @cursor.connect("add")
+        def on_add(sel):
+            idx = sel.index
+            msg_id = msg_ids[idx]
+            full_date = str(msg_dates[idx])[:19]
+
+            date_part = full_date[:10]
+            time_part = full_date[11:19]
+
+            sel.annotation.set_text(f"Post ID: {msg_id}\nTime: {time_part}\nDate: {date_part}")
+            sel.annotation.get_bbox_patch().set(
+                facecolor="white",
+                edgecolor="black",
+                linewidth=1,
+                alpha=1.0
+            )
+            sel.annotation.set_fontsize(9)
+
+        if deleted_points:
+            del_x = [p[0] for p in deleted_points]
+            del_y = [p[1] for p in deleted_points]
+            scatter_del = plt.scatter(
+                del_x,
+                del_y,
+                s=2,
+                alpha=0.4,
+                color="#ff0e0e",
+                label=f"Deleted ({len(deleted_points)})"
+            )
+
+            cursor_del = mplcursors.cursor(scatter_del, hover=True)
+
+            @cursor_del.connect("add")
+            def on_add_del(sel):
+                sel.annotation.set_text("Deleted message (estimated)")
+                sel.annotation.get_bbox_patch().set(
+                    facecolor="white",
+                    edgecolor="black",
+                    linewidth=1,
+                    alpha=1.0
+                )
+                sel.annotation.set_fontsize(9)
+
+        plt.xlabel("Days elapsed since the first message")
+        plt.ylabel("Hour of the day")
+        plt.ylim(0, 25)
+
         plt.gca().yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
         plt.gca().yaxis.set_minor_locator(MultipleLocator(1))
 
@@ -1491,20 +1561,32 @@ class TelyzerController:
         plt.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
         plt.gca().xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
 
+        plt.legend(loc='best', fontsize=8)
+
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         async def _get_channel_name():
             try:
                 entity = await self.cf.ta.client.get_entity(channel_id_val)
-                return entity.title
+                return entity.title, entity.username
             except:
-                return ""
+                return "", ""
 
-        channel_name = self.loop.run_until_complete(_get_channel_name())
-        if channel_name:
-            plt.title(f"Channel Activity Distribution - {channel_name}")
+        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+
+        plt.title("Channel Activity Timeline", fontsize=16, fontweight='bold')
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if channel_username:
+            footer = f"Created by Telyzer at {now_str}  |  @{channel_username}"
+        elif channel_name:
+            footer = f"Created by Telyzer at {now_str}  |  {channel_name}"
         else:
-            plt.title("Channel Activity Distribution")
+            footer = f"Created by Telyzer at {now_str}  |  Channel ID: {channel_id_val}"
+
+        plt.figtext(0.5, 0.01, footer, ha='center', fontsize=11, color='gray')
+
+        plt.tight_layout(rect=[0, 0.05, 1, 1])
 
         output_image = f"{images_folder}channel-{channel_id}-{today_dt}.jpg"
         plt.savefig(output_image, dpi=300)
