@@ -1391,11 +1391,27 @@ class TelyzerController:
             input("Press Enter to continue...")
             return None
 
-        print("Channel folders:")
-        for i, folder in enumerate(channel_folders, 1):
+        folder_info = []
+        for folder in channel_folders:
             folder_path = os.path.join(self.cf.channel_csv, folder)
             csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
-            print(f"{i}. {folder} ({len(csv_files)} CSV files)")
+            if csv_files:
+                latest_mtime = max(os.path.getmtime(f) for f in csv_files)
+            else:
+                latest_mtime = 0
+            folder_info.append((folder, len(csv_files), latest_mtime))
+
+        folder_info.sort(key=lambda x: x[2], reverse=True)
+
+        print("Channel folders:")
+        for i, (folder, count, mtime) in enumerate(folder_info, 1):
+            if mtime > 0:
+                mod_date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                mod_date = "N/A"
+            print(f"{i}. {folder} ({count} CSV files), {mod_date}")
+
+        channel_folders = [info[0] for info in folder_info]
 
         folder_choice = input("\nSelect folder number (or 'b' to back): ")
         if folder_choice.lower() == "b":
@@ -1417,13 +1433,14 @@ class TelyzerController:
             input("Press Enter to continue...")
             return None
 
-        csv_files.sort(key=os.path.getsize, reverse=True)
+        csv_files.sort(key=os.path.getmtime, reverse=True)
 
         print(f"\nCSV files in {selected_folder}:")
         for i, file in enumerate(csv_files, 1):
             file_name = os.path.basename(file)
             file_size = os.path.getsize(file) / 1024
-            print(f"{i}. {file_name} ({file_size:.1f} KB)")
+            mod_date = datetime.fromtimestamp(os.path.getmtime(file)).strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{i}. {file_name} ({file_size:.1f} KB) - {mod_date}")
 
         file_choice = input("\nSelect file number (or 'b' to back): ")
         if file_choice.lower() == "b":
