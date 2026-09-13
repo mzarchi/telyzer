@@ -1279,10 +1279,15 @@ class TelyzerController:
                     "row_number", "message_id", "publish_timestamp", "publish_datetime",
                     "edit_datetime", "sender_id", "is_outgoing", "message_type",
                     "message_text", "message_edited", "from_schedule", "via_bot_id",
-                    "reply_to_msg_id", "forward_from_id", "forward_from_name", "forward_date",
-                    "views", "forwards", "reactions_count", "replies_count",
+                    "reply_to_msg_id", "reply_to_top_id", "forward_from_id", "forward_from_name",
+                    "forward_date", "views", "forwards", "reactions_count", "replies_count",
                     "has_media", "media_type", "grouped_id", "post_author",
-                    "post", "pinned", "silent", "mentioned"
+                    "post", "pinned", "silent", "mentioned", "noforwards",
+                    "out", "sender_username", "sender_first_name", "sender_last_name",
+                    "media_caption", "has_reactions", "reactions_detail", "ttl_period",
+                    "action_type", "to_id", "from_id", "is_reply", "is_forward",
+                    "media_duration", "media_size", "media_mime", "media_name",
+                    "document_attributes"
                 ]
 
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -1306,8 +1311,8 @@ class TelyzerController:
                     entity,
                     min_id=start_from_id if start_from_id else 0,
                     limit=None,
-                    reverse=True):
-                    
+                    reverse=True
+                ):
                     message_data = {
                         "row_number": count,
                         "message_id": msg.id,
@@ -1322,11 +1327,12 @@ class TelyzerController:
                         "from_schedule": getattr(msg, "from_schedule", False),
                         "via_bot_id": msg.via_bot_id if msg.via_bot_id else "",
                         "reply_to_msg_id": msg.reply_to.reply_to_msg_id if msg.reply_to else "",
+                        "reply_to_top_id": msg.reply_to.reply_to_top_id if msg.reply_to and hasattr(msg.reply_to, "reply_to_top_id") else "",
                         "forward_from_id": msg.forward.from_id if msg.forward else "",
                         "forward_from_name": msg.forward.from_name if msg.forward else "",
                         "forward_date": msg.forward.date.isoformat() if msg.forward and msg.forward.date else "",
-                        "views": msg.views if hasattr(msg, "views") and msg.views else "",
-                        "forwards": msg.forwards if hasattr(msg, "forwards") and msg.forwards else "",
+                        "views": msg.views if hasattr(msg, "views") and msg.views is not None else "",
+                        "forwards": msg.forwards if hasattr(msg, "forwards") and msg.forwards is not None else "",
                         "reactions_count": sum(r.count for r in msg.reactions.results) if msg.reactions else 0,
                         "replies_count": msg.replies.replies if msg.replies else 0,
                         "has_media": bool(msg.media),
@@ -1337,7 +1343,38 @@ class TelyzerController:
                         "pinned": msg.pinned if hasattr(msg, "pinned") else False,
                         "silent": msg.silent if hasattr(msg, "silent") else False,
                         "mentioned": msg.mentioned if hasattr(msg, "mentioned") else False,
+                        "noforwards": getattr(msg, "noforwards", False),
+                        "out": msg.out,
+                        "sender_username": "",
+                        "sender_first_name": "",
+                        "sender_last_name": "",
+                        "media_caption": msg.text if msg.media else "",
+                        "has_reactions": bool(msg.reactions),
+                        "reactions_detail": str([(r.reaction, r.count) for r in msg.reactions.results]) if msg.reactions else "",
+                        "ttl_period": getattr(msg, "ttl_period", ""),
+                        "action_type": type(msg.action).__name__ if msg.action else "",
+                        "to_id": msg.to_id.channel_id if msg.to_id and hasattr(msg.to_id, "channel_id") else "",
+                        "from_id": msg.from_id.user_id if msg.from_id and hasattr(msg.from_id, "user_id") else (msg.from_id.channel_id if msg.from_id and hasattr(msg.from_id, "channel_id") else ""),
+                        "is_reply": bool(msg.reply_to),
+                        "is_forward": bool(msg.forward),
+                        "media_duration": getattr(msg.media, "duration", "") if msg.media and hasattr(msg.media, "duration") else "",
+                        "media_size": getattr(msg.file, "size", "") if msg.file else "",
+                        "media_mime": getattr(msg.file, "mime_type", "") if msg.file else "",
+                        "media_name": getattr(msg.file, "name", "") if msg.file else "",
+                        "document_attributes": str(msg.document.attributes) if msg.document and hasattr(msg.document, "attributes") else "",
                     }
+
+                    # گرفتن اطلاعات فرستنده
+                    if msg.sender_id:
+                        try:
+                            sender = await msg.get_sender()
+                            if sender:
+                                message_data["sender_username"] = getattr(sender, "username", "") or ""
+                                message_data["sender_first_name"] = getattr(sender, "first_name", "") or ""
+                                message_data["sender_last_name"] = getattr(sender, "last_name", "") or ""
+                        except:
+                            pass
+
                     writer.writerow(message_data)
 
                     last_rows.append([
