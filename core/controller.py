@@ -1598,6 +1598,7 @@ class TelyzerController:
                 alpha=1.0
             )
             sel.annotation.set_fontsize(9)
+            sel.annotation.set_multialignment("left")
 
         cursor_del = None
         if deleted_points:
@@ -1612,52 +1613,53 @@ class TelyzerController:
                 label=f"Deleted ({len(deleted_points)})"
             )
 
-        cursor_del = mplcursors.cursor(scatter_del, multiple=True)
+            cursor_del = mplcursors.cursor(scatter_del, multiple=True)
 
-        @cursor_del.connect("add")
-        def on_add_del(sel):
-            idx = sel.index
-            del_x_val = del_x[idx]
-            del_y_val = del_y[idx]
-            
-            prev_msg = df_sorted[df_sorted["days_from_start"] <= del_x_val].iloc[-1] if len(df_sorted[df_sorted["days_from_start"] <= del_x_val]) > 0 else None
-            next_msg = df_sorted[df_sorted["days_from_start"] >= del_x_val].iloc[0] if len(df_sorted[df_sorted["days_from_start"] >= del_x_val]) > 0 else None
-            
-            if prev_msg is not None and next_msg is not None:
-                prev_time = pd.to_datetime(prev_msg["publish_datetime"])
-                next_time = pd.to_datetime(next_msg["publish_datetime"])
-                avg_time = prev_time + (next_time - prev_time) / 2
-                date_part = avg_time.strftime("%Y-%m-%d")
-                time_part = avg_time.strftime("%H:%M:%S")
-            else:
-                date_part = "Unknown"
-                time_part = "Unknown"
-            
-            if prev_msg is not None and next_msg is not None:
-                prev_id = int(prev_msg["message_id"])
-                next_id = int(next_msg["message_id"])
-                gap = next_id - prev_id - 1
-                if gap > 0:
-                    ratio = (del_x_val - prev_msg["days_from_start"]) / (next_msg["days_from_start"] - prev_msg["days_from_start"]) if next_msg["days_from_start"] != prev_msg["days_from_start"] else 0
-                    est_id = int(prev_id + ratio * (next_id - prev_id))
+            @cursor_del.connect("add")
+            def on_add_del(sel):
+                idx = sel.index
+                del_x_val = del_x[idx]
+                del_y_val = del_y[idx]
+
+                prev_msg = df_sorted[df_sorted["days_from_start"] <= del_x_val].iloc[-1] if len(df_sorted[df_sorted["days_from_start"] <= del_x_val]) > 0 else None
+                next_msg = df_sorted[df_sorted["days_from_start"] >= del_x_val].iloc[0] if len(df_sorted[df_sorted["days_from_start"] >= del_x_val]) > 0 else None
+
+                if prev_msg is not None and next_msg is not None:
+                    prev_time = pd.to_datetime(prev_msg["publish_datetime"])
+                    next_time = pd.to_datetime(next_msg["publish_datetime"])
+                    avg_time = prev_time + (next_time - prev_time) / 2
+                    date_part = avg_time.strftime("%Y-%m-%d")
+                    time_part = avg_time.strftime("%H:%M:%S")
                 else:
-                    est_id = prev_id
-            else:
-                est_id = "Unknown"
-            
-            sel.annotation.set_text(
-                f"Post ID: {est_id}\n"
-                f"Time: {time_part}\n"
-                f"Date: {date_part}\n"
-                f"Status: Deleted"
-            )
-            sel.annotation.get_bbox_patch().set(
-                facecolor="white",
-                edgecolor="black",
-                linewidth=1,
-                alpha=1.0
-            )
-            sel.annotation.set_fontsize(9)
+                    date_part = "Unknown"
+                    time_part = "Unknown"
+
+                if prev_msg is not None and next_msg is not None:
+                    prev_id = int(prev_msg["message_id"])
+                    next_id = int(next_msg["message_id"])
+                    gap = next_id - prev_id - 1
+                    if gap > 0:
+                        ratio = (del_x_val - prev_msg["days_from_start"]) / (next_msg["days_from_start"] - prev_msg["days_from_start"]) if next_msg["days_from_start"] != prev_msg["days_from_start"] else 0
+                        est_id = int(prev_id + ratio * (next_id - prev_id))
+                    else:
+                        est_id = prev_id
+                else:
+                    est_id = "Unknown"
+
+                sel.annotation.set_text(
+                    f"Post ID: {est_id}\n"
+                    f"Time: {time_part}\n"
+                    f"Date: {date_part}\n"
+                    f"Status: Deleted"
+                )
+                sel.annotation.get_bbox_patch().set(
+                    facecolor="white",
+                    edgecolor="black",
+                    linewidth=1,
+                    alpha=1.0
+                )
+                sel.annotation.set_fontsize(9)
+                sel.annotation.set_multialignment("left")
 
         from matplotlib.backend_bases import MouseButton
 
@@ -1797,6 +1799,7 @@ class TelyzerController:
                 alpha=1.0
             )
             sel.annotation.set_fontsize(9)
+            sel.annotation.set_multialignment("left")
 
         from matplotlib.backend_bases import MouseButton
 
