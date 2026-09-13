@@ -1740,7 +1740,6 @@ class TelyzerController:
         df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
 
         df = df.sort_values("message_id").reset_index(drop=True)
-
         df[metric_column] = pd.to_numeric(df[metric_column], errors="coerce").fillna(0)
 
         names = csv_name.split("-")
@@ -1761,9 +1760,9 @@ class TelyzerController:
         y = df[metric_column].values
 
         line, = ax.plot(x, y, color=line_color, linewidth=1.2)
-        ax.fill_between(x, y, alpha=0.15, color=line_color)
+        fill = ax.fill_between(x, y, alpha=0.15, color=line_color)
 
-        points = ax.scatter(x, y, s=15, color=line_color, alpha=0.01, picker=True)
+        points = ax.scatter(x, y, s=200, color=line_color, alpha=0.01, picker=True)
 
         ax.set_xlabel("Post ID")
         ax.set_ylabel(metric_label)
