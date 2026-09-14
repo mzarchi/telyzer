@@ -1189,16 +1189,22 @@ class TelyzerController:
                 case "3":
                     selected_file = self.explore_channel_files()
                     if selected_file:
-                        self.plot_channel_views(selected_file)
+                        self.plot_channel_by_admin(selected_file)
                     self.cls()
 
                 case "4":
                     selected_file = self.explore_channel_files()
                     if selected_file:
-                        self.plot_channel_forwards(selected_file)
+                        self.plot_channel_views(selected_file)
                     self.cls()
 
                 case "5":
+                    selected_file = self.explore_channel_files()
+                    if selected_file:
+                        self.plot_channel_forwards(selected_file)
+                    self.cls()
+
+                case "6":
                     selected_file = self.explore_channel_files()
                     if selected_file:
                         self.plot_channel_comments(selected_file)
@@ -1381,7 +1387,6 @@ class TelyzerController:
                         "document_attributes": str(msg.document.attributes) if msg.document and hasattr(msg.document, "attributes") else "",
                     }
 
-                    # گرفتن اطلاعات فرستنده
                     if msg.sender_id:
                         try:
                             sender = await msg.get_sender()
@@ -1837,6 +1842,203 @@ class TelyzerController:
         plt.tight_layout(rect=[0, 0.05, 1, 1])
 
         output_image = f"{images_folder}channel-{channel_id}-{metric_column}-{today_dt}.jpg"
+        plt.savefig(output_image, dpi=300)
+        plt.show()
+
+        print(f"\nPlot saved to: {output_image}")
+    
+    def plot_channel_by_admin(self, csv_path):
+        self.cls()
+        csv_name = os.path.basename(csv_path)
+        df = pd.read_csv(csv_path)
+        df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
+
+        iran_tz = pytz.timezone("Asia/Tehran")
+        df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
+
+        df = df.sort_values("publish_datetime")
+        df["hour"] = (df["publish_datetime"].dt.hour +
+                    df["publish_datetime"].dt.minute / 60)
+        start_date = df["publish_datetime"].min()
+        df["days_from_start"] = (
+            (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
+
+        names = csv_name.split("-")
+        channel_id = names[0]
+        channel_id_val = channel_id
+        if str(channel_id).lstrip("-").isdigit():
+            channel_id_val = int(channel_id)
+
+        print(f"Channel ID: {channel_id_val}")
+        print(f"Total messages: {len(df)}")
+
+        # --- آماده‌سازی ادمین‌ها ---
+        df["post_author"] = df["post_author"].fillna("").astype(str).str.strip()
+
+        has_admin = df[df["post_author"] != ""]
+
+        if has_admin.empty:
+            print("\nNo admin posts found in this channel!")
+            input("Press Enter to continue...")
+            return
+
+        admin_counts = has_admin["post_author"].value_counts()
+        unique_admins = list(admin_counts.index)
+
+        print(f"\nAdmins found: {len(unique_admins)}")
+        for admin, count in admin_counts.items():
+            print(f"  {admin}: {count} messages")
+
+        # --- پرسیدن تعداد ادمین رنگی ---
+        print(f"\nThere are {len(unique_admins)} admins.")
+        while True:
+            try:
+                n_str = input(f"How many top admins do you want to highlight? (1-{len(unique_admins)}): ").strip()
+                n = int(n_str)
+                if 1 <= n <= len(unique_admins):
+                    break
+                else:
+                    print(f"Please enter a number between 1 and {len(unique_admins)}.")
+            except:
+                print("Invalid input. Please enter a number.")
+
+        top_admins = unique_admins[:n]
+        other_admins = unique_admins[n:]
+
+        images_folder = f"{self.cf.chat_images}"
+        os.makedirs(images_folder, exist_ok=True)
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+
+        admin_colors = [
+            "#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd",
+            "#8c564b", "#e377c2", "#bcbd22", "#17becf", "#7f7f7f",
+            "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",
+            "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5"
+        ]
+
+        scatter_map = {}
+
+        # --- خاکستری: ادمین‌های دیگه ---
+        if other_admins:
+            other_admins_df = has_admin[has_admin["post_author"].isin(other_admins)]
+            scatter_others = ax.scatter(
+                other_admins_df["days_from_start"],
+                other_admins_df["hour"],
+                s=2,
+                alpha=0.4,
+                color="#c7c7c7",
+                label=f"Other Admins ({len(other_admins_df)})"
+            )
+            scatter_map[scatter_others] = other_admins_df
+
+        # --- رنگی: top admins ---
+        for idx, admin in enumerate(top_admins):
+            admin_df = has_admin[has_admin["post_author"] == admin]
+            color = admin_colors[idx % len(admin_colors)]
+
+            scatter_admin = ax.scatter(
+                admin_df["days_from_start"],
+                admin_df["hour"],
+                s=4,
+                alpha=0.8,
+                color=color,
+                label=f"{admin} ({len(admin_df)})"
+            )
+            scatter_map[scatter_admin] = admin_df
+
+        # --- mplcursors ---
+        all_scatters = list(scatter_map.keys())
+
+        cursor = mplcursors.cursor(all_scatters, multiple=True)
+
+        @cursor.connect("add")
+        def on_add(sel):
+            artist = sel.artist
+            df_ref = scatter_map.get(artist)
+
+            if df_ref is None:
+                return
+
+            idx = sel.index
+            row = df_ref.iloc[idx]
+
+            msg_id = row["message_id"]
+            full_date = str(row["publish_datetime"])[:19]
+            date_part = full_date[:10]
+            time_part = full_date[11:19]
+            author = row["post_author"] if row["post_author"] else "No Admin"
+
+            sel.annotation.set_text(
+                f"Post ID: {msg_id}\n"
+                f"Time: {time_part}\n"
+                f"Date: {date_part}\n"
+                f"Author: {author}\n"
+                f"Status: Alive"
+            )
+            sel.annotation.get_bbox_patch().set(
+                facecolor="white",
+                edgecolor="black",
+                linewidth=1,
+                alpha=1.0
+            )
+            sel.annotation.set_fontsize(9)
+            sel.annotation.set_multialignment("left")
+
+        # --- کلیک راست ---
+        from matplotlib.backend_bases import MouseButton
+
+        def on_click(event):
+            if event.button == MouseButton.RIGHT:
+                for sel in list(cursor.selections):
+                    cursor.remove_selection(sel)
+                fig.canvas.draw_idle()
+
+        fig.canvas.mpl_connect("button_press_event", on_click)
+
+        # --- تنظیمات محور ---
+        ax.set_xlabel("Days elapsed since the first message")
+        ax.set_ylabel("Hour of the day")
+        ax.set_ylim(0, 25)
+        ax.set_xlim(0, df["days_from_start"].max() + 1)
+
+        ax.yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
+        ax.yaxis.set_minor_locator(MultipleLocator(1))
+
+        ax.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+
+        ax.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+
+        ax.legend(loc='best', fontsize=7, ncol=2)
+
+        today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        async def _get_channel_name():
+            try:
+                entity = await self.cf.ta.client.get_entity(channel_id_val)
+                return entity.title, entity.username
+            except:
+                return "", ""
+
+        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+
+        plt.title("Channel Activity by Admin", fontsize=16, fontweight='bold')
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if channel_username:
+            footer = f"Created by Telyzer at {now_str}  |  @{channel_username}"
+        elif channel_name:
+            footer = f"Created by Telyzer at {now_str}  |  {channel_name}"
+        else:
+            footer = f"Created by Telyzer at {now_str}  |  Channel ID: {channel_id_val}"
+
+        plt.figtext(0.5, 0.01, footer, ha='center', fontsize=11, color='gray')
+
+        plt.tight_layout(rect=[0, 0.05, 1, 1])
+
+        output_image = f"{images_folder}channel-{channel_id}-admin-{today_dt}.jpg"
         plt.savefig(output_image, dpi=300)
         plt.show()
 
