@@ -1872,7 +1872,6 @@ class TelyzerController:
         print(f"Channel ID: {channel_id_val}")
         print(f"Total messages: {len(df)}")
 
-        # --- آماده‌سازی ادمین‌ها ---
         df["post_author"] = df["post_author"].fillna("").astype(str).str.strip()
 
         has_admin = df[df["post_author"] != ""]
@@ -1889,7 +1888,6 @@ class TelyzerController:
         for admin, count in admin_counts.items():
             print(f"  {admin}: {count} messages")
 
-        # --- پرسیدن تعداد ادمین رنگی ---
         print(f"\nThere are {len(unique_admins)} admins.")
         while True:
             try:
@@ -1919,7 +1917,6 @@ class TelyzerController:
 
         scatter_map = {}
 
-        # --- خاکستری: ادمین‌های دیگه ---
         if other_admins:
             other_admins_df = has_admin[has_admin["post_author"].isin(other_admins)]
             scatter_others = ax.scatter(
@@ -1932,7 +1929,6 @@ class TelyzerController:
             )
             scatter_map[scatter_others] = other_admins_df
 
-        # --- رنگی: top admins ---
         for idx, admin in enumerate(top_admins):
             admin_df = has_admin[has_admin["post_author"] == admin]
             color = admin_colors[idx % len(admin_colors)]
@@ -1947,7 +1943,6 @@ class TelyzerController:
             )
             scatter_map[scatter_admin] = admin_df
 
-        # --- mplcursors ---
         all_scatters = list(scatter_map.keys())
 
         cursor = mplcursors.cursor(all_scatters, multiple=True)
@@ -1985,7 +1980,6 @@ class TelyzerController:
             sel.annotation.set_fontsize(9)
             sel.annotation.set_multialignment("left")
 
-        # --- کلیک راست ---
         from matplotlib.backend_bases import MouseButton
 
         def on_click(event):
@@ -1996,7 +1990,6 @@ class TelyzerController:
 
         fig.canvas.mpl_connect("button_press_event", on_click)
 
-        # --- تنظیمات محور ---
         ax.set_xlabel("Days elapsed since the first message")
         ax.set_ylabel("Hour of the day")
         ax.set_ylim(0, 25)
