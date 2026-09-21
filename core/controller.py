@@ -1233,7 +1233,6 @@ class TelyzerController:
         if target_channel.lstrip("-").isdigit():
             target_channel = int(target_channel)
 
-        self.send_log(f"Stream-Started: {target_channel}")
         dt = self.get_datetime()
 
         async def _stream():
@@ -1252,6 +1251,14 @@ class TelyzerController:
             if not (hasattr(entity, 'broadcast') or hasattr(entity, 'title')):
                 print("This is not a channel!")
                 return
+
+            """
+            
+            await self.send_log_async(
+                type="text-message",
+                text=f"Stream-Started: {target_channel}"
+            )
+            """
 
             channel_id = entity.id
             channel_folder = f"{self.cf.channel_csv}{channel_id}/"
@@ -1306,13 +1313,13 @@ class TelyzerController:
                 total_new = all_messages.total
 
             tb_text = "Stream Details:\n"
-            tb_text = "- Status: 0%\n"
+            tb_text += "- Status: 0%\n"
             tb_text += f"- Count: 0/{total_new}\n"
             tb_text += f"- Source: @{target_channel}\n"
-            await self.send_log_async({
-                "type": "text-message",
-                "text": tb_text
-            })
+            await self.send_log_async(
+                type="text-message",
+                text=tb_text
+            )
 
             if append_mode and old_file_path:
                 shutil.copy2(old_file_path, output_csv)
@@ -1448,13 +1455,13 @@ class TelyzerController:
                         step = total_new // 10
                         if step > 0 and new_count % step == 0:
                             tb_text = "Stream Details:\n"
-                            tb_text = f"- Status: {percent}%\n"
+                            tb_text += f"- Status: {percent}%\n"
                             tb_text += f"- Count: {new_count}/{total_new}\n"
                             tb_text += f"- Source: @{target_channel}\n"
-                            await self.send_log_async({
-                                "type": "text-message",
-                                "text": tb_text
-                            })
+                            await self.send_log_async(
+                                type="text-message",
+                                text=tb_text
+                            )
                     else:
                         print(f"\rReading new messages: {new_count}", end="")
 
@@ -2099,17 +2106,23 @@ class TelyzerController:
         print(f"\nPlot saved to: {output_image}")
 
     def send_log(self, **kv):
-        if not self.cf.log_channel_id:
-            return
-        self.loop.run_until_complete(self.send_log_async(**kv))
+        try:
+            self.loop.run_until_complete(
+                self.send_log_async(**kv)
+            )
+        except Exception as e:
+            print(f"Failed to send log: {e}")
 
     async def send_log_async(self, **kv):
         try:
-            my_userid = self.get_me().id
+            me = await self.cf.ta.client.get_me()
+            my_userid = me.id
+
             if kv['type'] == "text-message":
                 await self.telyzerbot.send_message(
                     my_userid,
                     kv['text']
                 )
+
         except Exception as e:
             print(f"Failed to send log: {e}")
