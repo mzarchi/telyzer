@@ -1,42 +1,43 @@
-import threading
+import logging
 import time
 import os
 import sys
-from unittest import case
+import threading
 
-loading_done = False
-tc = None
+logging.getLogger('telethon').setLevel(logging.ERROR)
 
 
-def load_app():
-    global loading_done, tc
-    from core.controller import TelyzerController
-    tc = TelyzerController()
-    loading_done = True
+def _spinner(stop_event):
+    dots_states = ["", ".", "..", "..."]
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f"\rPlease wait, loading Telyzer{dots_states[i % len(dots_states)]}")
+        sys.stdout.flush()
+        time.sleep(0.4)
+        i += 1
 
 
 def main():
-    global loading_done, tc
     os.system('cls' if os.name == 'nt' else 'clear')
-    
-    load_thread = threading.Thread(target=load_app, daemon=True)
-    load_thread.start()
-    
-    dots = 0
-    while not loading_done:
-        dots = (dots + 1) % 4
-        sys.stdout.write(f"\rPlease wait, loading Telyzer {'.' * dots}   ")
-        sys.stdout.flush()
-        time.sleep(0.3)
-    
-    sys.stdout.write("\rPlease wait, loading Telyzer ... Done!   \n")
+
+    stop_event = threading.Event()
+    spinner_thread = threading.Thread(target=_spinner, args=(stop_event,), daemon=True)
+    spinner_thread.start()
+
+    from core.controller import TelyzerController
+    tc = TelyzerController()
+
+    stop_event.set()
+    spinner_thread.join()
+
+    sys.stdout.write("\rPlease wait, loading Telyzer ... Done!\n")
     sys.stdout.flush()
     time.sleep(0.3)
-    
+
     os.system('cls' if os.name == 'nt' else 'clear')
-    
+
     import messages as msg
-    
+
     try:
         while True:
             tc.cls()
@@ -67,7 +68,7 @@ def main():
 
                 case "3":
                     tc.groups()
-                    
+
                 case "4":
                     tc.channels()
 
