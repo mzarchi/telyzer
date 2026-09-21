@@ -1172,8 +1172,8 @@ class TelyzerController:
         return latest_num > current_num
 
     def channels(self):
-        self.cls()
         while True:
+            self.cls()
             user_choose = input(msg.msg_channels)
             match user_choose:
                 case "1":
@@ -1219,6 +1219,7 @@ class TelyzerController:
         if target_channel.lstrip("-").isdigit():
             target_channel = int(target_channel)
 
+        self.send_log(f"Stream-Started: {target_channel}")
         dt = self.get_datetime()
 
         async def _stream():
@@ -1288,6 +1289,8 @@ class TelyzerController:
             else:
                 all_messages = await self.cf.ta.client.get_messages(entity, limit=0)
                 total_new = all_messages.total
+
+            await self.send_log_async(f"Stream-Status: 0% (0/{total_new})")
 
             if append_mode and old_file_path:
                 shutil.copy2(old_file_path, output_csv)
@@ -1414,6 +1417,10 @@ class TelyzerController:
                     if total_new > 0:
                         percent = ceil(new_count / total_new * 100)
                         print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+
+                        step = total_new // 10
+                        if step > 0 and new_count % step == 0:
+                            await self.send_log_async(f"Stream-Status: {percent}% ({new_count}/{total_new})")
                     else:
                         print(f"\rReading new messages: {new_count}", end="")
 
@@ -1433,8 +1440,7 @@ class TelyzerController:
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to continue...")
-
-
+        
     def explore_channel_files(self):
         self.cls()
 
@@ -2036,3 +2042,20 @@ class TelyzerController:
         plt.show()
 
         print(f"\nPlot saved to: {output_image}")
+    
+    def send_log(self, text):
+        if not self.cf.log_channel_id:
+            return
+        self.loop.run_until_complete(self.send_log_async(text))
+
+
+    async def send_log_async(self, text):
+        if not self.cf.log_channel_id:
+            return
+        try:
+            await self.cf.ta.client.send_message(
+                self.cf.log_channel_id,
+                text
+            )
+        except Exception as e:
+            print(f"Failed to send log: {e}")
