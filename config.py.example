@@ -7,9 +7,10 @@ class Config:
 
     def app_init(self):
         self.ta = None
+        self.log_channel_id = 0
         self.api_id = ""
         self.api_hash = ""
-        self.app_version = "(Beta) vC90-2609"
+        self.app_version = "(Beta) vC98-2609"
         self.session_path = r"C:\telyzer\session\telyzer"
         os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
 
@@ -19,11 +20,13 @@ class Config:
         self.group_csv = f"{app_root}Groups-CSV/"
         self.chat_images = f"{app_root}Chats-Images/"
         self.system_logs = f"{app_root}System-Logs/"
+        self.channel_csv = f"{app_root}Channels-CSV/"
 
         self.mk = [
             self.contact_lists,
             self.chat_csv,
             self.group_csv,
+            self.channel_csv,
             self.chat_images,
             self.system_logs
         ]
