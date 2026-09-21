@@ -1,28 +1,29 @@
+import os
+import sys
+import csv
+import glob
+import pytz
+import shutil
+import asyncio
+import requests
+import pandas as pd
+import mplcursors
+import messages as msg
+from math import ceil
+from datetime import datetime
+from collections import Counter
+from telegram.telyzerbot import TelyzerBot
+from telegram.auth import TelegramAuth
+from matplotlib.ticker import MultipleLocator, FixedLocator
+from telethon.tl.functions.users import GetFullUserRequest
+from telethon.tl.functions.contacts import GetContactsRequest
+from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
+import matplotlib.pyplot as plt
 from config import Config
 import matplotlib
 matplotlib.use('TkAgg')
-matplotlib.rcParams['font.family'] = ['Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
-import matplotlib.pyplot as plt
-from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently, UserStatusLastWeek, UserStatusLastMonth
-from telethon.tl.functions.contacts import GetContactsRequest
-from telethon.tl.functions.users import GetFullUserRequest
-from matplotlib.ticker import MultipleLocator, FixedLocator
-from telegram.auth import TelegramAuth
-from collections import Counter
-from datetime import datetime
-from math import ceil
-
-import messages as msg
-import mplcursors
-import pandas as pd
-import requests
-import asyncio
-import shutil
-import pytz
-import glob
-import csv
-import sys
-import os
+matplotlib.rcParams['font.family'] = [
+    'Tahoma', 'Segoe UI Emoji', 'Segoe UI Symbol', 'sans-serif']
 
 
 class TelyzerController:
@@ -30,6 +31,7 @@ class TelyzerController:
 
     def __init__(self):
         self.cf = Config()
+        self.telyzerbot = TelyzerBot()
         if self.cf.ta is None:
             self.cf.ta = TelegramAuth(
                 self.cf.session_path,
@@ -250,12 +252,12 @@ class TelyzerController:
                 }
 
                 writer.writerow(contact_data)
-                
+
                 print(f"{i:<6}  {contact.id:<14}  +{phone:<15}  {name}")
 
         print(f"\nContacts saved to: {file_path}")
         input("Press Enter to continue...")
-    
+
     def detect_message_type(self, msg):
         if msg.raw_text and not msg.media:
             return "text"
@@ -321,7 +323,8 @@ class TelyzerController:
                             pass
 
                 if max_msg_id > 0:
-                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(
+                        f"Previous file found: {os.path.basename(old_file_path)}")
                     print(f"File size: {os.path.getsize(old_file_path)} bytes")
                     print(f"Last message ID: {max_msg_id}")
                     user_choice = input("Get only newer messages? (y/n): ")
@@ -348,7 +351,8 @@ class TelyzerController:
             if append_mode and old_file_path:
                 shutil.copy2(old_file_path, output_csv)
                 os.remove(old_file_path)
-                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(
+                    f"Copied previous file to: {os.path.basename(output_csv)}")
                 print(f"Removed old file: {os.path.basename(old_file_path)}")
 
             mode = "a" if append_mode else "w"
@@ -417,7 +421,8 @@ class TelyzerController:
 
                     if total_new > 0:
                         percent = ceil(new_count / total_new * 100)
-                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+                        print(
+                            f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
                     else:
                         print(f"\rReading new messages: {new_count}", end="")
 
@@ -428,37 +433,40 @@ class TelyzerController:
             else:
                 print("\nLast 5 messages:")
                 print("-" * 80)
-                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print(
+                    f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
                 print("-" * 80)
 
                 for row in last_rows[-5:]:
                     row_num, msg_id, ts, dt_str, sender_id, is_out = row
-                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+                    print(
+                        f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to show plot ...")
-        
+
     def chat_visualization(self):
         self.cls()
-        
+
         if not os.path.exists(self.cf.chat_csv):
             print("No chat CSV folder found!")
             input("Press Enter to continue...")
             return
-        
-        user_folders = [f for f in os.listdir(self.cf.chat_csv) if os.path.isdir(os.path.join(self.cf.chat_csv, f))]
-        
+
+        user_folders = [f for f in os.listdir(self.cf.chat_csv) if os.path.isdir(
+            os.path.join(self.cf.chat_csv, f))]
+
         if not user_folders:
             print("No user folders found!")
             input("Press Enter to continue...")
             return
-        
+
         print("User folders:")
         for i, folder in enumerate(user_folders, 1):
             folder_path = os.path.join(self.cf.chat_csv, folder)
             csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
             print(f"{i}. {folder} ({len(csv_files)} CSV files)")
-        
+
         folder_choice = input("\nSelect folder number: ")
         try:
             folder_idx = int(folder_choice) - 1
@@ -467,23 +475,23 @@ class TelyzerController:
             print("Invalid choice!")
             input("Press Enter to continue...")
             return
-        
+
         folder_path = os.path.join(self.cf.chat_csv, selected_folder)
         csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
-        
+
         if not csv_files:
             print("No CSV files in this folder!")
             input("Press Enter to continue...")
             return
-        
+
         csv_files.sort(key=os.path.getsize, reverse=True)
-        
+
         print(f"\nCSV files in {selected_folder}:")
         for i, file in enumerate(csv_files, 1):
             file_name = os.path.basename(file)
             file_size = os.path.getsize(file) / 1024  # KB
             print(f"{i}. {file_name} ({file_size:.1f} KB)")
-        
+
         file_choice = input("\nSelect file number: ")
         try:
             file_idx = int(file_choice) - 1
@@ -492,10 +500,8 @@ class TelyzerController:
             print("Invalid choice!")
             input("Press Enter to continue...")
             return
-        
+
         return selected_file
-
-
 
     def plot_chat(self, csv_path):
         self.cls()
@@ -504,31 +510,31 @@ class TelyzerController:
         df = df.dropna(subset=["sender_id"])
         df["sender_id"] = df["sender_id"].astype("Int64")
         df["publish_datetime"] = pd.to_datetime(df["publish_datetime"])
-        
+
         iran_tz = pytz.timezone("Asia/Tehran")
         df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
-        
+
         df = df.sort_values("publish_datetime")
         df["hour"] = (df["publish_datetime"].dt.hour +
-                    df["publish_datetime"].dt.minute / 60)
+                      df["publish_datetime"].dt.minute / 60)
         start_date = df["publish_datetime"].min()
         df["days_from_start"] = (
             (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
-        
+
         names = csv_name.split("-")
         my_user_id = names[0]
         target_user_id = names[1].split("_")[0]
         my_msgs = df[df["is_outgoing"] == True]
         other_msgs = df[df["is_outgoing"] == False]
-        
+
         print(f"User {my_user_id}: {len(my_msgs)} messages")
         print(f"User {target_user_id}: {len(other_msgs)} messages")
-        
+
         images_folder = f"{self.cf.chat_images}"
         os.makedirs(images_folder, exist_ok=True)
-        
+
         plt.figure(figsize=(8, 4))
-        
+
         plt.scatter(
             my_msgs["days_from_start"],
             my_msgs["hour"],
@@ -537,7 +543,7 @@ class TelyzerController:
             color="#d62728",
             label=f"{my_user_id} ({len(my_msgs)})"
         )
-        
+
         plt.scatter(
             other_msgs["days_from_start"],
             other_msgs["hour"],
@@ -546,27 +552,29 @@ class TelyzerController:
             color="#1f77b4",
             label=f"{target_user_id} ({len(other_msgs)})"
         )
-        
+
         plt.xlabel("Days from First Message")
         plt.ylabel("Hour of Day")
         plt.ylim(0, 25)
-        
+
         plt.gca().yaxis.set_major_locator(FixedLocator([0, 5, 10, 15, 20]))
         plt.gca().yaxis.set_minor_locator(MultipleLocator(1))
 
-        plt.grid(which='major', axis='y', linestyle='--', alpha=0.9) # every 5 hours
-        plt.grid(which='minor', axis='y', linestyle='--', alpha=0.5) # every 1 hour
+        plt.grid(which='major', axis='y', linestyle='--',
+                 alpha=0.9)  # every 5 hours
+        plt.grid(which='minor', axis='y', linestyle='--',
+                 alpha=0.5)  # every 1 hour
         plt.legend()
-        
+
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
         plt.title("Chat Activity Distribution Over Time")
-        
+
         output_image = f"{images_folder}{my_user_id}-{target_user_id}-{today_dt}.jpg"
         plt.savefig(output_image, dpi=600)
         plt.show()
-        
+
         print(f"\nPlot saved to: {output_image}")
-        
+
     def groups(self):
         self.cls()
         while True:
@@ -585,13 +593,12 @@ class TelyzerController:
                 case "b":
                     break
 
-
     def group_stream(self, target_group):
         me = self.get_me()
         target_group = target_group.replace("@", "")
         if target_group.lstrip("-").isdigit():
             target_group = int(target_group)
-            
+
         dt = self.get_datetime()
 
         async def _stream():
@@ -639,7 +646,8 @@ class TelyzerController:
                             pass
 
                 if max_msg_id > 0:
-                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(
+                        f"Previous file found: {os.path.basename(old_file_path)}")
                     print(f"File size: {os.path.getsize(old_file_path)} bytes")
                     print(f"Last message ID: {max_msg_id}")
                     user_choice = input("Get only newer messages? (y/n): ")
@@ -665,7 +673,8 @@ class TelyzerController:
             if append_mode and old_file_path:
                 shutil.copy2(old_file_path, output_csv)
                 os.remove(old_file_path)
-                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(
+                    f"Copied previous file to: {os.path.basename(output_csv)}")
                 print(f"Removed old file: {os.path.basename(old_file_path)}")
 
             mode = "a" if append_mode else "w"
@@ -734,7 +743,8 @@ class TelyzerController:
 
                     if total_new > 0:
                         percent = ceil(new_count / total_new * 100)
-                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+                        print(
+                            f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
                     else:
                         print(f"\rReading new messages: {new_count}", end="")
 
@@ -745,16 +755,17 @@ class TelyzerController:
             else:
                 print("\nLast 5 messages:")
                 print("-" * 80)
-                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print(
+                    f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
                 print("-" * 80)
 
                 for row in last_rows[-5:]:
                     row_num, msg_id, ts, dt_str, sender_id, is_out = row
-                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+                    print(
+                        f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to continue...")
-
 
     def explore_group_files(self):
         self.cls()
@@ -764,7 +775,8 @@ class TelyzerController:
             input("Press Enter to continue...")
             return None
 
-        group_folders = [f for f in os.listdir(self.cf.group_csv) if os.path.isdir(os.path.join(self.cf.group_csv, f))]
+        group_folders = [f for f in os.listdir(self.cf.group_csv) if os.path.isdir(
+            os.path.join(self.cf.group_csv, f))]
 
         if not group_folders:
             print("No group folders found!")
@@ -819,7 +831,6 @@ class TelyzerController:
 
         return selected_file
 
-
     def plot_group(self, csv_path):
         self.cls()
         csv_name = os.path.basename(csv_path)
@@ -831,7 +842,7 @@ class TelyzerController:
 
         df = df.sort_values("publish_datetime")
         df["hour"] = (df["publish_datetime"].dt.hour +
-                    df["publish_datetime"].dt.minute / 60)
+                      df["publish_datetime"].dt.minute / 60)
         start_date = df["publish_datetime"].min()
         df["days_from_start"] = (
             (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
@@ -848,7 +859,7 @@ class TelyzerController:
         print(f"Group ID: {group_id_val}")
         print(f"Total messages: {len(df)}")
         print(f"Total senders: {len(sender_counts)}")
-        
+
         print(f"\nTop 10 active members:")
         for sender_id, count in sender_counts.most_common(10):
             print(f"  {sender_id}: {count} messages")
@@ -859,7 +870,7 @@ class TelyzerController:
         plt.figure(figsize=(10, 5))
 
         colors = ["#d62728", "#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd",
-          "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+                  "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
         other_df = df[~df["sender_id"].isin(top_senders)]
         if not other_df.empty:
@@ -891,6 +902,7 @@ class TelyzerController:
         plt.legend(loc='best', fontsize=8)
 
         today_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
+
         async def _get_group_name():
             try:
                 entity = await self.cf.ta.client.get_entity(group_id_val)
@@ -900,7 +912,7 @@ class TelyzerController:
 
         group_name = self.loop.run_until_complete(_get_group_name())
         plt.title(f"Group Activity Distribution - {group_name}")
-        
+
         output_image = f"{images_folder}group-{group_id}-{today_dt}.jpg"
         plt.savefig(output_image, dpi=300)
         plt.show()
@@ -910,17 +922,17 @@ class TelyzerController:
     def user_lookup(self, target_user):
         self.cls()
         target_user = target_user.replace("@", "")
-        
+
         async def _lookup():
             try:
                 entity = await self.cf.ta.client.get_entity(target_user)
-                
+
                 name = f"{entity.first_name or ''} {entity.last_name or ''}".strip()
                 username = f"@{entity.username}" if entity.username else "None"
                 phone = entity.phone or "Hidden"
                 user_id = entity.id
                 lang_code = entity.lang_code or "None"
-                
+
                 status = "No status"
                 if entity.status:
                     if isinstance(entity.status, UserStatusOnline):
@@ -935,12 +947,12 @@ class TelyzerController:
                         status = "Last month"
                     else:
                         status = str(entity.status)
-                
+
                 full = await self.cf.ta.client(GetFullUserRequest(entity.id))
                 bio = ""
                 if hasattr(full, 'full_user') and full.full_user.about:
                     bio = full.full_user.about
-                
+
                 print("User Lookup Result:")
                 print("-" * 50)
                 print(f"Name:          {name}")
@@ -958,13 +970,15 @@ class TelyzerController:
                 print(f"Restricted:    {'Yes' if entity.restricted else 'No'}")
                 print(f"Deleted:       {'Yes' if entity.deleted else 'No'}")
                 print(f"Contact:       {'Yes' if entity.contact else 'No'}")
-                print(f"Mutual:        {'Yes' if entity.mutual_contact else 'No'}")
-                print(f"Photo ID:      {entity.photo.photo_id if entity.photo else 'No photo'}")
+                print(
+                    f"Mutual:        {'Yes' if entity.mutual_contact else 'No'}")
+                print(
+                    f"Photo ID:      {entity.photo.photo_id if entity.photo else 'No photo'}")
                 print("-" * 50)
-                
+
             except Exception as e:
                 print(f"Error: {e}")
-        
+
         self.loop.run_until_complete(_lookup())
         input("Press Enter to continue...")
 
@@ -1025,7 +1039,8 @@ class TelyzerController:
                 return
 
             if response.status_code != 200:
-                print(f"Error: Cannot connect to GitHub (Status: {response.status_code})")
+                print(
+                    f"Error: Cannot connect to GitHub (Status: {response.status_code})")
                 input("Press Enter to continue...")
                 return
 
@@ -1101,7 +1116,8 @@ class TelyzerController:
                                 if total > 0:
                                     percent = int(downloaded / total * 100)
                                     if percent != last_percent and percent % 5 == 0:
-                                        print(f"\rDownloading: {percent}% ({downloaded // 1024} KB / {total // 1024} KB)", end="")
+                                        print(
+                                            f"\rDownloading: {percent}% ({downloaded // 1024} KB / {total // 1024} KB)", end="")
                                         last_percent = percent
 
                 print("\nDownload complete!")
@@ -1165,7 +1181,6 @@ class TelyzerController:
             print(f"Error: {e}")
             input("Press Enter to continue...")
 
-
     def compare_versions(self, current, latest):
         current_num = int(current.split("vC")[1].split("-")[0])
         latest_num = int(latest.split("vC")[1].split("-")[0])
@@ -1212,7 +1227,6 @@ class TelyzerController:
 
                 case "b":
                     break
-
 
     def channel_stream(self, target_channel):
         target_channel = target_channel.replace("@", "")
@@ -1267,7 +1281,8 @@ class TelyzerController:
                             pass
 
                 if max_msg_id > 0:
-                    print(f"Previous file found: {os.path.basename(old_file_path)}")
+                    print(
+                        f"Previous file found: {os.path.basename(old_file_path)}")
                     print(f"File size: {os.path.getsize(old_file_path)} bytes")
                     print(f"Last message ID: {max_msg_id}")
                     user_choice = input("Get only newer messages? (y/n): ")
@@ -1290,12 +1305,20 @@ class TelyzerController:
                 all_messages = await self.cf.ta.client.get_messages(entity, limit=0)
                 total_new = all_messages.total
 
-            await self.send_log_async(f"Stream-Status: 0% (0/{total_new})")
+            tb_text = "Stream Details:\n"
+            tb_text = "- Status: 0%\n"
+            tb_text += f"- Count: 0/{total_new}\n"
+            tb_text += f"- Source: @{target_channel}\n"
+            await self.send_log_async({
+                "type": "text-message",
+                "text": tb_text
+            })
 
             if append_mode and old_file_path:
                 shutil.copy2(old_file_path, output_csv)
                 os.remove(old_file_path)
-                print(f"Copied previous file to: {os.path.basename(output_csv)}")
+                print(
+                    f"Copied previous file to: {os.path.basename(output_csv)}")
                 print(f"Removed old file: {os.path.basename(old_file_path)}")
 
             mode = "a" if append_mode else "w"
@@ -1394,9 +1417,12 @@ class TelyzerController:
                         try:
                             sender = await msg.get_sender()
                             if sender:
-                                message_data["sender_username"] = getattr(sender, "username", "") or ""
-                                message_data["sender_first_name"] = getattr(sender, "first_name", "") or ""
-                                message_data["sender_last_name"] = getattr(sender, "last_name", "") or ""
+                                message_data["sender_username"] = getattr(
+                                    sender, "username", "") or ""
+                                message_data["sender_first_name"] = getattr(
+                                    sender, "first_name", "") or ""
+                                message_data["sender_last_name"] = getattr(
+                                    sender, "last_name", "") or ""
                         except:
                             pass
 
@@ -1416,11 +1442,19 @@ class TelyzerController:
 
                     if total_new > 0:
                         percent = ceil(new_count / total_new * 100)
-                        print(f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
+                        print(
+                            f"\rReading new messages: {new_count}/{total_new} ({percent}%)", end="")
 
                         step = total_new // 10
                         if step > 0 and new_count % step == 0:
-                            await self.send_log_async(f"Stream-Status: {percent}% ({new_count}/{total_new})")
+                            tb_text = "Stream Details:\n"
+                            tb_text = f"- Status: {percent}%\n"
+                            tb_text += f"- Count: {new_count}/{total_new}\n"
+                            tb_text += f"- Source: @{target_channel}\n"
+                            await self.send_log_async({
+                                "type": "text-message",
+                                "text": tb_text
+                            })
                     else:
                         print(f"\rReading new messages: {new_count}", end="")
 
@@ -1431,16 +1465,18 @@ class TelyzerController:
             else:
                 print("\nLast 5 messages:")
                 print("-" * 80)
-                print(f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
+                print(
+                    f"{'Row':<6} {'Msg ID':<12} {'Timestamp':<15} {'Datetime':<25} {'Sender ID':<15} {'Outgoing':<10}")
                 print("-" * 80)
 
                 for row in last_rows[-5:]:
                     row_num, msg_id, ts, dt_str, sender_id, is_out = row
-                    print(f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
+                    print(
+                        f"{row_num:<6}{msg_id:<12} {ts:<15} {dt_str:<25} {sender_id:<15} {'Yes' if is_out else 'No':<10}")
 
         self.loop.run_until_complete(_stream())
         input("Press Enter to continue...")
-        
+
     def explore_channel_files(self):
         self.cls()
 
@@ -1449,7 +1485,8 @@ class TelyzerController:
             input("Press Enter to continue...")
             return None
 
-        channel_folders = [f for f in os.listdir(self.cf.channel_csv) if os.path.isdir(os.path.join(self.cf.channel_csv, f))]
+        channel_folders = [f for f in os.listdir(self.cf.channel_csv) if os.path.isdir(
+            os.path.join(self.cf.channel_csv, f))]
 
         if not channel_folders:
             print("No channel folders found!")
@@ -1471,7 +1508,8 @@ class TelyzerController:
         print("Channel folders:")
         for i, (folder, count, mtime) in enumerate(folder_info, 1):
             if mtime > 0:
-                mod_date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                mod_date = datetime.fromtimestamp(
+                    mtime).strftime("%Y-%m-%d %H:%M:%S")
             else:
                 mod_date = "N/A"
             print(f"{i}. {folder} ({count} CSV files), {mod_date}")
@@ -1504,7 +1542,8 @@ class TelyzerController:
         for i, file in enumerate(csv_files, 1):
             file_name = os.path.basename(file)
             file_size = os.path.getsize(file) / 1024
-            mod_date = datetime.fromtimestamp(os.path.getmtime(file)).strftime("%Y-%m-%d %H:%M:%S")
+            mod_date = datetime.fromtimestamp(
+                os.path.getmtime(file)).strftime("%Y-%m-%d %H:%M:%S")
             print(f"{i}. {file_name} ({file_size:.1f} KB) - {mod_date}")
 
         file_choice = input("\nSelect file number (or 'b' to back): ")
@@ -1521,7 +1560,6 @@ class TelyzerController:
 
         return selected_file
 
-
     def plot_channel(self, csv_path):
         self.cls()
         csv_name = os.path.basename(csv_path)
@@ -1533,7 +1571,7 @@ class TelyzerController:
 
         df = df.sort_values("publish_datetime")
         df["hour"] = (df["publish_datetime"].dt.hour +
-                    df["publish_datetime"].dt.minute / 60)
+                      df["publish_datetime"].dt.minute / 60)
         start_date = df["publish_datetime"].min()
         df["days_from_start"] = (
             (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
@@ -1632,8 +1670,10 @@ class TelyzerController:
                 del_x_val = del_x[idx]
                 del_y_val = del_y[idx]
 
-                prev_msg = df_sorted[df_sorted["days_from_start"] <= del_x_val].iloc[-1] if len(df_sorted[df_sorted["days_from_start"] <= del_x_val]) > 0 else None
-                next_msg = df_sorted[df_sorted["days_from_start"] >= del_x_val].iloc[0] if len(df_sorted[df_sorted["days_from_start"] >= del_x_val]) > 0 else None
+                prev_msg = df_sorted[df_sorted["days_from_start"] <= del_x_val].iloc[-1] if len(
+                    df_sorted[df_sorted["days_from_start"] <= del_x_val]) > 0 else None
+                next_msg = df_sorted[df_sorted["days_from_start"] >= del_x_val].iloc[0] if len(
+                    df_sorted[df_sorted["days_from_start"] >= del_x_val]) > 0 else None
 
                 if prev_msg is not None and next_msg is not None:
                     prev_time = pd.to_datetime(prev_msg["publish_datetime"])
@@ -1650,7 +1690,8 @@ class TelyzerController:
                     next_id = int(next_msg["message_id"])
                     gap = next_id - prev_id - 1
                     if gap > 0:
-                        ratio = (del_x_val - prev_msg["days_from_start"]) / (next_msg["days_from_start"] - prev_msg["days_from_start"]) if next_msg["days_from_start"] != prev_msg["days_from_start"] else 0
+                        ratio = (del_x_val - prev_msg["days_from_start"]) / (next_msg["days_from_start"] -
+                                                                             prev_msg["days_from_start"]) if next_msg["days_from_start"] != prev_msg["days_from_start"] else 0
                         est_id = int(prev_id + ratio * (next_id - prev_id))
                     else:
                         est_id = prev_id
@@ -1692,10 +1733,13 @@ class TelyzerController:
         ax.yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
         ax.yaxis.set_minor_locator(MultipleLocator(1))
 
-        ax.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
-        ax.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+        ax.grid(which='major', axis='y', linestyle='--',
+                alpha=1.0, linewidth=0.8)
+        ax.grid(which='minor', axis='y', linestyle='--',
+                alpha=0.4, linewidth=0.5)
 
-        ax.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.grid(which='major', axis='x', linestyle='--',
+                alpha=1.0, linewidth=0.8)
         ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
 
         ax.legend(loc='best', fontsize=8)
@@ -1709,7 +1753,8 @@ class TelyzerController:
             except:
                 return "", ""
 
-        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+        channel_name, channel_username = self.loop.run_until_complete(
+            _get_channel_name())
 
         plt.title("Channel Activity Timeline", fontsize=16, fontweight='bold')
 
@@ -1734,14 +1779,12 @@ class TelyzerController:
     def plot_channel_views(self, csv_path):
         self._plot_channel_metric(csv_path, "views", "Views", "#1f77b4")
 
-
     def plot_channel_forwards(self, csv_path):
         self._plot_channel_metric(csv_path, "forwards", "Forwards", "#9467bd")
 
-
     def plot_channel_comments(self, csv_path):
-        self._plot_channel_metric(csv_path, "replies_count", "Comments", "#2ca02c")
-
+        self._plot_channel_metric(
+            csv_path, "replies_count", "Comments", "#2ca02c")
 
     def _plot_channel_metric(self, csv_path, metric_column, metric_label, line_color):
         self.cls()
@@ -1753,7 +1796,8 @@ class TelyzerController:
         df["publish_datetime"] = df["publish_datetime"].dt.tz_convert(iran_tz)
 
         df = df.sort_values("message_id").reset_index(drop=True)
-        df[metric_column] = pd.to_numeric(df[metric_column], errors="coerce").fillna(0)
+        df[metric_column] = pd.to_numeric(
+            df[metric_column], errors="coerce").fillna(0)
 
         names = csv_name.split("-")
         channel_id = names[0]
@@ -1775,7 +1819,8 @@ class TelyzerController:
         line, = ax.plot(x, y, color=line_color, linewidth=1.2)
         fill = ax.fill_between(x, y, alpha=0.15, color=line_color)
 
-        points = ax.scatter(x, y, s=200, color=line_color, alpha=0.01, picker=True)
+        points = ax.scatter(x, y, s=200, color=line_color,
+                            alpha=0.01, picker=True)
 
         ax.set_xlabel("Post ID")
         ax.set_ylabel(metric_label)
@@ -1831,9 +1876,11 @@ class TelyzerController:
             except:
                 return "", ""
 
-        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+        channel_name, channel_username = self.loop.run_until_complete(
+            _get_channel_name())
 
-        plt.title(f"Channel {metric_label} Timeline", fontsize=16, fontweight='bold')
+        plt.title(f"Channel {metric_label} Timeline",
+                  fontsize=16, fontweight='bold')
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if channel_username:
@@ -1852,7 +1899,7 @@ class TelyzerController:
         plt.show()
 
         print(f"\nPlot saved to: {output_image}")
-    
+
     def plot_channel_by_admin(self, csv_path):
         self.cls()
         csv_name = os.path.basename(csv_path)
@@ -1864,7 +1911,7 @@ class TelyzerController:
 
         df = df.sort_values("publish_datetime")
         df["hour"] = (df["publish_datetime"].dt.hour +
-                    df["publish_datetime"].dt.minute / 60)
+                      df["publish_datetime"].dt.minute / 60)
         start_date = df["publish_datetime"].min()
         df["days_from_start"] = (
             (df["publish_datetime"] - start_date).dt.total_seconds() / 86400)
@@ -1878,7 +1925,8 @@ class TelyzerController:
         print(f"Channel ID: {channel_id_val}")
         print(f"Total messages: {len(df)}")
 
-        df["post_author"] = df["post_author"].fillna("").astype(str).str.strip()
+        df["post_author"] = df["post_author"].fillna(
+            "").astype(str).str.strip()
 
         has_admin = df[df["post_author"] != ""]
 
@@ -1897,12 +1945,14 @@ class TelyzerController:
         print(f"\nThere are {len(unique_admins)} admins.")
         while True:
             try:
-                n_str = input(f"How many top admins do you want to highlight? (1-{len(unique_admins)}): ").strip()
+                n_str = input(
+                    f"How many top admins do you want to highlight? (1-{len(unique_admins)}): ").strip()
                 n = int(n_str)
                 if 1 <= n <= len(unique_admins):
                     break
                 else:
-                    print(f"Please enter a number between 1 and {len(unique_admins)}.")
+                    print(
+                        f"Please enter a number between 1 and {len(unique_admins)}.")
             except:
                 print("Invalid input. Please enter a number.")
 
@@ -1924,7 +1974,8 @@ class TelyzerController:
         scatter_map = {}
 
         if other_admins:
-            other_admins_df = has_admin[has_admin["post_author"].isin(other_admins)]
+            other_admins_df = has_admin[has_admin["post_author"].isin(
+                other_admins)]
             scatter_others = ax.scatter(
                 other_admins_df["days_from_start"],
                 other_admins_df["hour"],
@@ -2004,10 +2055,13 @@ class TelyzerController:
         ax.yaxis.set_major_locator(FixedLocator([0, 4, 8, 12, 16, 20, 24]))
         ax.yaxis.set_minor_locator(MultipleLocator(1))
 
-        ax.grid(which='major', axis='y', linestyle='--', alpha=1.0, linewidth=0.8)
-        ax.grid(which='minor', axis='y', linestyle='--', alpha=0.4, linewidth=0.5)
+        ax.grid(which='major', axis='y', linestyle='--',
+                alpha=1.0, linewidth=0.8)
+        ax.grid(which='minor', axis='y', linestyle='--',
+                alpha=0.4, linewidth=0.5)
 
-        ax.grid(which='major', axis='x', linestyle='--', alpha=1.0, linewidth=0.8)
+        ax.grid(which='major', axis='x', linestyle='--',
+                alpha=1.0, linewidth=0.8)
         ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
 
         ax.legend(loc='best', fontsize=7, ncol=2)
@@ -2021,7 +2075,8 @@ class TelyzerController:
             except:
                 return "", ""
 
-        channel_name, channel_username = self.loop.run_until_complete(_get_channel_name())
+        channel_name, channel_username = self.loop.run_until_complete(
+            _get_channel_name())
 
         plt.title("Channel Activity by Admin", fontsize=16, fontweight='bold')
 
@@ -2042,20 +2097,19 @@ class TelyzerController:
         plt.show()
 
         print(f"\nPlot saved to: {output_image}")
-    
-    def send_log(self, text):
+
+    def send_log(self, **kv):
         if not self.cf.log_channel_id:
             return
-        self.loop.run_until_complete(self.send_log_async(text))
+        self.loop.run_until_complete(self.send_log_async(**kv))
 
-
-    async def send_log_async(self, text):
-        if not self.cf.log_channel_id:
-            return
+    async def send_log_async(self, **kv):
         try:
-            await self.cf.ta.client.send_message(
-                self.cf.log_channel_id,
-                text
-            )
+            my_userid = self.get_me().id
+            if kv['type'] == "text-message":
+                await self.telyzerbot.send_message(
+                    my_userid,
+                    kv['text']
+                )
         except Exception as e:
             print(f"Failed to send log: {e}")
