@@ -8,7 +8,7 @@ class TelyzerBot:
         self.base_url = f"https://api.telegram.org/bot{self.cf.telyzer_bot}/"
         self.session = requests.Session()
 
-    def send_message(self, chat_id, message, timeout=10):
+    async def send_message(self, chat_id, message, timeout=10):
         url = self.base_url + "sendMessage"
         payload = {
             "chat_id": chat_id,
