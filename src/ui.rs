@@ -1,48 +1,42 @@
-use eframe::egui;
-use crate::app::LoginApp;
+use iced::widget::{button, column, container, space, text, text_input};
+use iced::{Element, Length};
+
+use crate::app::{LoginApp, Message};
 use crate::constants::*;
 
-pub fn draw_login(ui: &mut egui::Ui, app: &mut LoginApp) {
-    ui.vertical_centered(|ui| {
-        ui.add_space(SPACE_TOP);
-        draw_title(ui);
-        ui.add_space(SPACE_AFTER_TITLE);
-        draw_phone_input(ui, app);
-        ui.add_space(SPACE_BEFORE_BUTTON);
-        draw_login_button(ui, app);
-        draw_error(ui, app);
-    });
-}
+pub fn view(app: &LoginApp) -> Element<'_, Message> {
+    let title = text(TITLE).size(FONT_TITLE);
 
-fn draw_title(ui: &mut egui::Ui) {
-    ui.label(egui::RichText::new(TITLE).size(FONT_TITLE).strong());
-}
+    let phone_label = text(LABEL_PHONE).size(FONT_LABEL);
 
-fn draw_phone_input(ui: &mut egui::Ui, app: &mut LoginApp) {
-    ui.label(egui::RichText::new(LABEL_PHONE).size(FONT_LABEL));
-    ui.add_space(6.0);
-    ui.add_sized(
-        [INPUT_WIDTH, INPUT_HEIGHT],
-        egui::TextEdit::singleline(&mut app.phone)
-            .font(egui::TextStyle::Body)
-            .hint_text("0912..."),
-    );
-}
+    let phone_input = text_input(HINT_PHONE, &app.phone)
+        .on_input(Message::PhoneChanged)
+        .on_submit(Message::LoginPressed)
+        .padding(INPUT_PADDING)
+        .size(FONT_INPUT);
 
-fn draw_login_button(ui: &mut egui::Ui, app: &mut LoginApp) {
-    let button = egui::Button::new(
-        egui::RichText::new(BUTTON_LOGIN).size(FONT_BUTTON),
-    )
-    .min_size(egui::vec2(BUTTON_WIDTH, BUTTON_HEIGHT));
+    let login_button = button(text(BUTTON_LOGIN).size(FONT_BUTTON))
+        .on_press(Message::LoginPressed);
 
-    if ui.add(button).clicked() {
-        app.try_login();
+    let mut content = column![
+        space::vertical().height(SPACE_TOP),
+        title,
+        space::vertical().height(SPACE_AFTER_TITLE),
+        phone_label,
+        phone_input,
+        space::vertical().height(SPACE_BEFORE_BUTTON),
+        login_button,
+    ]
+    .spacing(SPACE_BETWEEN_FIELDS)
+    .width(Length::Fixed(FORM_WIDTH))
+    .align_x(iced::Alignment::Center);
+
+    if let Some(error) = &app.error {
+        content = content.push(text(error).size(FONT_LABEL).style(text::danger));
     }
-}
 
-fn draw_error(ui: &mut egui::Ui, app: &LoginApp) {
-    if let Some(msg) = &app.error {
-        ui.add_space(SPACE_BETWEEN_FIELDS);
-        ui.colored_label(egui::Color32::RED, msg);
-    }
+    container(content)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill)
+        .into()
 }
