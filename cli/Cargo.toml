@@ -1,0 +1,7 @@
+[package]
+name = "telyzer-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+telyzer-core = { path = "../core" }

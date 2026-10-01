@@ -1,7 +1,3 @@
-[package]
-name = "telyzer"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-iced = "0.14"
+[workspace]
+members = ["core", "cli", "gui"]
+resolver = "2"
