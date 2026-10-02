@@ -2,3 +2,8 @@
 name = "telyzer-core"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+grammers-client = "0.7"
+grammers-session = "0.7"
+tokio = { version = "1", features = ["full"] }
