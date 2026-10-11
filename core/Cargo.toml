@@ -1,9 +1,19 @@
 [package]
 name = "telyzer-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 [dependencies]
-grammers-client = "0.7"
-grammers-session = "0.7"
-tokio = { version = "1", features = ["full"] }
+grammers-client = { workspace = true }
+grammers-session = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+directories = { workspace = true }
