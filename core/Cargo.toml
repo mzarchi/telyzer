@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 grammers-client = { workspace = true }
 grammers-session = { workspace = true }
+grammers-mtsender = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
