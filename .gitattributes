@@ -11,3 +11,6 @@
 
 *.rs text eol=lf
 Cargo.lock text eol=lf
+
+* text=auto
+*.toml text eol=lf
