@@ -1,3 +1,5 @@
-pub fn cook(order: &str) -> String {
-    format!("Food ready: {}", order)
-}
+pub mod config;
+pub mod error;
+
+pub use config::Paths;
+pub use error::{CoreError, Result};
