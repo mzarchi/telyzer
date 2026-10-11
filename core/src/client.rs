@@ -1,6 +1,6 @@
 use crate::config::Paths;
 use crate::error::{CoreError, Result};
-use crate::secrets::{API_HASH, API_ID};
+use crate::secrets::{API_ID};
 use grammers_client::Client;
 use grammers_mtsender::SenderPool;
 use grammers_session::storages::SqliteSession;

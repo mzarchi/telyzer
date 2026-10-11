@@ -22,11 +22,18 @@ pub enum CoreError {
     #[error("Session file is corrupted or invalid: {0}")]
     CorruptedSession(String),
 
+    #[error("Login failed: {0}")]
+    LoginFailed(String),
+
     #[error("Telegram error: {0}")]
     Telegram(#[from] grammers_client::InvocationError),
 
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("Sign-in error: {0}")]
+    SignIn(#[from] grammers_client::SignInError),
+
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;
