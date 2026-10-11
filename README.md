@@ -11,7 +11,7 @@
 [![Status](https://img.shields.io/badge/Status-In%20Development-orange)](https://github.com/mzarchi/telyzer)
 [![GitHub](https://img.shields.io/badge/GitHub-mzarchi%2Ftelyzer-181717?logo=github)](https://github.com/mzarchi/telyzer)
 
-[Overview](#-overview) · [Architecture](#-architecture) · [Getting Started](#-getting-started) · [Roadmap](#-roadmap)
+[Overview](#overview) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Roadmap](#roadmap)
 
 </div>
 
