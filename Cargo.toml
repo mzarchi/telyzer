@@ -18,6 +18,7 @@ repository = "https://github.com/mzarchi/telyzer"
 [workspace.dependencies]
 grammers-client = { git = "https://github.com/Lonami/grammers" }
 grammers-session = { git = "https://github.com/Lonami/grammers" }
+grammers-mtsender = { git = "https://github.com/Lonami/grammers" }
 
 tokio = { version = "1", features = ["full"] }
 

@@ -1,9 +1,16 @@
 use anyhow::Result;
+use telyzer_core::{Paths, TelyzerClient};
 
-fn main() -> Result<()> {
-    let paths = telyzer_core::Paths::init()?;
-    println!("Data dir:   {}", paths.data_dir().display());
-    println!("Config dir: {}", paths.config_dir().display());
-    println!("Session:    {}", paths.session_file().display());
+#[tokio::main]
+async fn main() -> Result<()> {
+    let paths = Paths::init()?;
+    println!("Data dir: {}", paths.data_dir().display());
+
+    let client = TelyzerClient::new(&paths).await?;
+    println!("Connected to Telegram!");
+
+    let authorized = client.is_authorized().await?;
+    println!("Authorized: {}", authorized);
+
     Ok(())
 }

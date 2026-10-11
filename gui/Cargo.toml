@@ -1,9 +1,13 @@
 [package]
 name = "telyzer-gui"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 telyzer-core = { path = "../core" }
-eframe = "0.27"
-iced = "0.14.0"
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+iced = { version = "0.13", features = ["tokio", "image", "svg"] }

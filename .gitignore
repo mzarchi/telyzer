@@ -1,3 +1,4 @@
 /target
 /python-legacy
 cmds.txt
+core/src/secrets.rs
