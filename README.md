@@ -41,26 +41,41 @@ Telyzer is organized as a Cargo workspace:
 
 ```text
 telyzer/
+├── .gitattributes
+├── .gitignore
+├── Cargo.toml
+├── Cargo.lock
+├── LICENCE
+├── README.md
+├── clippy.toml
+├── rustfmt.toml
+│
 ├── core/
 │   ├── Cargo.toml
 │   └── src/
+│       ├── auth.rs
+│       ├── client.rs
 │       ├── config.rs
 │       ├── error.rs
-│       └── lib.rs
+│       ├── lib.rs
+│       └── secrets.rs.example
+│
 ├── cli/
 │   ├── Cargo.toml
 │   └── src/
-│       └── main.rs
-├── gui/
-│   ├── Cargo.toml
-│   └── src/
-│       ├── app.rs
-│       ├── constants.rs
 │       ├── main.rs
-│       └── ui.rs
-├── Cargo.toml
-├── Cargo.lock
-└── LICENSE
+│       └── commands/
+│           ├── mod.rs
+│           ├── login.rs
+│           └── whoami.rs
+│
+└── gui/
+    ├── Cargo.toml
+    └── src/
+        ├── app.rs
+        ├── constants.rs
+        ├── main.rs
+        └── ui.rs
 ```
 
 ### Workspace packages
