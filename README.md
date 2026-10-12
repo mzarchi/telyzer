@@ -138,7 +138,7 @@ cargo clippy --workspace --all-targets
 
 Telyzer is actively evolving. Planned development areas include:
 
-- [*] Complete Telegram authentication and session management
+- [x] Complete Telegram authentication and session management
 - [ ] Connect the GUI login flow to the Telegram client
 - [ ] Implement channel and chat data collection
 - [ ] Add message analysis and statistical reporting
