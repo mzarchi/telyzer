@@ -16,9 +16,9 @@ authors = ["Mohammad Zarchi mzarchi94@gmail.com"]
 repository = "https://github.com/mzarchi/telyzer"
 
 [workspace.dependencies]
-grammers-client = { git = "https://github.com/Lonami/grammers" }
-grammers-session = { git = "https://github.com/Lonami/grammers" }
-grammers-mtsender = { git = "https://github.com/Lonami/grammers" }
+grammers-client = { git = "https://codeberg.org/Lonami/grammers.git" }
+grammers-session = { git = "https://codeberg.org/Lonami/grammers.git" }
+grammers-mtsender = { git = "https://codeberg.org/Lonami/grammers.git" }
 
 tokio = { version = "1", features = ["full"] }
 
