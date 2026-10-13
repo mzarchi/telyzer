@@ -2,7 +2,7 @@
 
 # ◈ Telyzer
 
-### A Rust-powered foundation for exploring Telegram data.
+### A Rust-powered foundation for exploring Telegram data & Analysis
 
 **A work in progress — built for extensibility, clarity, and control.**
 
