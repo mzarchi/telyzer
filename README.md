@@ -64,9 +64,11 @@ telyzer/
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs
+│       ├── menu.rs
 │       └── commands/
 │           ├── mod.rs
 │           ├── login.rs
+│           ├── logout.rs
 │           └── whoami.rs
 │
 └── gui/
@@ -101,7 +103,18 @@ git clone https://github.com/mzarchi/telyzer.git
 cd telyzer
 ```
 
-### 2. Run the CLI
+### 2. Add your Telegram API credentials
+
+Get an `api_id` and `api_hash` from <https://my.telegram.org>, then:
+
+```bash
+cp core/src/secrets.rs.example core/src/secrets.rs
+# edit API_ID and API_HASH inside core/src/secrets.rs
+```
+
+This file is git-ignored. The project does not build without it.
+
+### 3. Run the CLI
 
 ```bash
 cargo run -p telyzer-cli
@@ -109,7 +122,7 @@ cargo run -p telyzer-cli
 
 The current CLI initializes the application paths and displays the locations used for application data, configuration, and the Telegram session file.
 
-### 3. Build the project
+### 4. Build the project
 
 Build all workspace packages:
 

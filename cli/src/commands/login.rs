@@ -1,18 +1,25 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use dialoguer::{Input, Password};
-use telyzer_core::{Paths, SignInResult, TelyzerClient};
+use telyzer_core::{validate_phone, SignInResult, TelyzerClient};
 
-pub async fn run(paths: &Paths) -> Result<()> {
-    let client = TelyzerClient::new(paths).await?;
+const MAX_CODE_ATTEMPTS: u32 = 3;
 
+pub async fn run(client: &TelyzerClient) -> Result<()> {
     if client.is_authorized().await? {
-        println!("You are already logged in. Use 'Who am I' to see your info.");
+        println!("You are already logged in. Use 'whoami' to see your info.");
         return Ok(());
     }
 
-    let phone: String = Input::new()
-        .with_prompt("Phone number (e.g. +989121234567)")
-        .interact_text()?;
+    let phone = loop {
+        let raw: String = Input::new()
+            .with_prompt("Phone number (e.g. +989121234567)")
+            .interact_text()?;
+
+        match validate_phone(&raw) {
+            Ok(phone) => break phone,
+            Err(e) => eprintln!("{e}"),
+        }
+    };
 
     println!("Requesting login code...");
     let token = client
@@ -21,6 +28,7 @@ pub async fn run(paths: &Paths) -> Result<()> {
         .context("Failed to request login code")?;
     println!("Code sent. Check your Telegram app.");
 
+    let mut attempts = 0;
     let password_token = loop {
         let code: String = Input::new().with_prompt("Enter code").interact_text()?;
 
@@ -36,6 +44,13 @@ pub async fn run(paths: &Paths) -> Result<()> {
             SignInResult::NeedPassword(pt) => {
                 println!("Two-factor authentication required.");
                 break pt;
+            }
+            SignInResult::InvalidCode => {
+                attempts += 1;
+                if attempts >= MAX_CODE_ATTEMPTS {
+                    bail!("Too many invalid codes. Please start the login again.");
+                }
+                eprintln!("Invalid code, try again ({attempts}/{MAX_CODE_ATTEMPTS}).");
             }
         }
     };

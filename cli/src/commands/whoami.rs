@@ -1,9 +1,7 @@
 use anyhow::Result;
-use telyzer_core::{Paths, TelyzerClient};
+use telyzer_core::TelyzerClient;
 
-pub async fn run(paths: &Paths) -> Result<()> {
-    let client = TelyzerClient::new(paths).await?;
-
+pub async fn run(client: &TelyzerClient) -> Result<()> {
     if !client.is_authorized().await? {
         println!("Not logged in. Use 'Login' first.");
         return Ok(());
