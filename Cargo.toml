@@ -16,9 +16,9 @@ authors = ["Mohammad Zarchi mzarchi94@gmail.com"]
 repository = "https://github.com/mzarchi/telyzer"
 
 [workspace.dependencies]
-grammers-client = { git = "https://codeberg.org/Lonami/grammers.git" }
-grammers-session = { git = "https://codeberg.org/Lonami/grammers.git" }
-grammers-mtsender = { git = "https://codeberg.org/Lonami/grammers.git" }
+grammers-client = { git = "https://codeberg.org/Lonami/grammers.git", rev = "198a6b4af62dbe403a7d839b40256c40e5e39d8d" }
+grammers-session = { git = "https://codeberg.org/Lonami/grammers.git", rev = "198a6b4af62dbe403a7d839b40256c40e5e39d8d" }
+grammers-mtsender = { git = "https://codeberg.org/Lonami/grammers.git", rev = "198a6b4af62dbe403a7d839b40256c40e5e39d8d" }
 clap = { version = "4", features = ["derive"] }
 dialoguer = "0.11"
 
