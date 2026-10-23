@@ -15,8 +15,7 @@ pub fn view(app: &LoginApp) -> Element<'_, Message> {
         .padding(INPUT_PADDING)
         .size(FONT_INPUT);
 
-    let login_button = button(text(BUTTON_LOGIN).size(FONT_BUTTON))
-        .on_press(Message::LoginPressed);
+    let login_button = button(text(BUTTON_LOGIN).size(FONT_BUTTON)).on_press(Message::LoginPressed);
 
     let mut content = column![
         Space::with_height(SPACE_TOP),

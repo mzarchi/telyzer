@@ -22,7 +22,7 @@ impl LoginApp {
             }
             Message::LoginPressed => {
                 self.error = None;
-                
+
                 let phone = self.phone.clone();
                 Task::perform(
                     async move {
@@ -37,8 +37,7 @@ impl LoginApp {
             }
             Message::LoginResult(result) => {
                 match result {
-                    Ok(_) => {
-                    }
+                    Ok(_) => {}
                     Err(e) => {
                         self.error = Some(e);
                     }

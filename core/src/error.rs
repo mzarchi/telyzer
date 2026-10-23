@@ -33,7 +33,6 @@ pub enum CoreError {
 
     #[error("Sign-in error: {0}")]
     SignIn(#[from] grammers_client::SignInError),
-
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;

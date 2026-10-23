@@ -11,7 +11,7 @@ pub async fn run(paths: &Paths) -> Result<()> {
 
     println!("Logging out...");
     client.sign_out().await?;
-    
+
     drop(client);
 
     let session_file = paths.session_file();

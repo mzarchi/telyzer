@@ -22,9 +22,7 @@ pub async fn run(paths: &Paths) -> Result<()> {
     println!("Code sent. Check your Telegram app.");
 
     let password_token = loop {
-        let code: String = Input::new()
-            .with_prompt("Enter code")
-            .interact_text()?;
+        let code: String = Input::new().with_prompt("Enter code").interact_text()?;
 
         match client.sign_in(&token, &code).await? {
             SignInResult::Success(user) => {
@@ -42,9 +40,7 @@ pub async fn run(paths: &Paths) -> Result<()> {
         }
     };
 
-    let password: String = Password::new()
-        .with_prompt("Password")
-        .interact()?;
+    let password: String = Password::new().with_prompt("Password").interact()?;
 
     let user = client.sign_in_password(password_token, &password).await?;
     println!(

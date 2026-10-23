@@ -2,57 +2,47 @@ name: Rust CI
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
-  workflow_dispatch:
-
-permissions:
-  contents: read
+    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    name: Check Rust Workspace
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    
+    # 1. ساخت فایل secrets.rs فیک برای گیت‌هاب (باید اول باشه)
+    - name: Create temporary secrets.rs for CI
+      run: |
+        echo 'pub const API_ID: i32 = 12345;' > core/src/secrets.rs
+        echo 'pub const API_HASH: &str = "dummy_hash_for_ci";' >> core/src/secrets.rs
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libxkbcommon-dev \
-            libwayland-dev \
-            libx11-dev \
-            libxrandr-dev \
-            libxi-dev \
-            libxcursor-dev \
-            libxinerama-dev \
-            libgl1-mesa-dev
+    # 2. نصب پیش‌نیازهای گرافیکی برای Iced (GUI)
+    - name: Install Linux dependencies for Iced
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxkbcommon-x11-0 libwayland-dev libx11-dev libxcb1-dev
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+    # 3. چک کردن فرمت‌بندی
+    - name: Check formatting
+      run: cargo fmt --all -- --check
 
-      - name: Check workspace
-        run: cargo check --workspace --locked
+    - name: Run clippy
+      run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --locked
+    - name: Build
+      run: cargo build --workspace
 
-      - name: Run tests
-        run: cargo test --workspace --locked
-
-      - name: Build workspace
-        run: cargo build --workspace --locked
+    - name: Run tests
+      run: cargo test --workspace
