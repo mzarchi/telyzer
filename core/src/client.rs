@@ -48,7 +48,7 @@ impl TelyzerClient {
         let client = Client::new(handle.clone());
         let runner = tokio::spawn(runner.run());
         let quit: Box<dyn FnOnce() + Send> = Box::new(move || {
-            handle.quit();
+            drop(handle);
         });
 
         Ok(Self {

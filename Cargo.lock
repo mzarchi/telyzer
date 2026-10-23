@@ -1772,7 +1772,7 @@ dependencies = [
 [[package]]
 name = "grammers-client"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "futures-util",
  "grammers-crypto",
@@ -1790,7 +1790,7 @@ dependencies = [
 [[package]]
 name = "grammers-crypto"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "aes",
  "ctr",
@@ -1807,7 +1807,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtproto"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "bytes",
  "crc32fast",
@@ -1823,7 +1823,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtsender"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "bytes",
  "grammers-crypto",
@@ -1839,7 +1839,7 @@ dependencies = [
 [[package]]
 name = "grammers-session"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "grammers-tl-types",
  "libsql",
@@ -1850,7 +1850,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-gen"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "grammers-tl-parser",
 ]
@@ -1858,7 +1858,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-parser"
 version = "1.2.2"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "crc32fast",
 ]
@@ -1866,7 +1866,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-types"
 version = "0.10.0"
-source = "git+https://codeberg.org/Lonami/grammers.git#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
+source = "git+https://codeberg.org/Lonami/grammers.git?rev=198a6b4af62dbe403a7d839b40256c40e5e39d8d#198a6b4af62dbe403a7d839b40256c40e5e39d8d"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -2225,12 +2225,6 @@ name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
-
-[[package]]
-name = "itoa"
-version = "1.0.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "jiff"
@@ -4018,19 +4012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_json"
-version = "1.0.154"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
-dependencies = [
- "itoa",
- "memchr",
- "serde",
- "serde_core",
- "zmij",
-]
-
-[[package]]
 name = "serde_repr"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4411,7 +4392,6 @@ dependencies = [
  "dialoguer",
  "telyzer-core",
  "tokio",
- "tracing",
  "tracing-subscriber",
 ]
 
@@ -4419,27 +4399,21 @@ dependencies = [
 name = "telyzer-core"
 version = "1.26.10"
 dependencies = [
- "anyhow",
  "directories",
  "grammers-client",
  "grammers-mtsender",
  "grammers-session",
- "serde",
- "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
- "tracing",
 ]
 
 [[package]]
 name = "telyzer-gui"
 version = "1.26.10"
 dependencies = [
- "anyhow",
  "iced",
  "telyzer-core",
- "tokio",
- "tracing",
  "tracing-subscriber",
 ]
 
@@ -5738,12 +5712,6 @@ name = "zlib-rs"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
-
-[[package]]
-name = "zmij"
-version = "1.0.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[package]]
 name = "zune-inflate"
