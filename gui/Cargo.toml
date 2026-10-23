@@ -5,8 +5,5 @@ edition.workspace = true
 
 [dependencies]
 telyzer-core = { path = "../core" }
-tokio = { workspace = true }
-anyhow = { workspace = true }
-tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 iced = { version = "0.13", features = ["tokio", "image", "svg"] }

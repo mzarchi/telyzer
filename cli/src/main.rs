@@ -2,7 +2,7 @@ mod commands;
 mod menu;
 
 use clap::{Parser, Subcommand};
-use telyzer_core::Paths;
+use telyzer_core::{Paths, TelyzerClient};
 
 #[derive(Parser)]
 #[command(name = "telyzer")]
@@ -28,12 +28,15 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
     let paths = Paths::init()?;
+    let client = TelyzerClient::new(&paths).await?;
 
-    match cli.command {
-        Some(Commands::Login) => commands::login::run(&paths).await?,
-        Some(Commands::Whoami) => commands::whoami::run(&paths).await?,
-        None => menu::run(&paths).await?,
-    }
+    let result = match cli.command {
+        Some(Commands::Login) => commands::login::run(&client).await,
+        Some(Commands::Whoami) => commands::whoami::run(&client).await,
+        // The menu owns the client and shuts it down itself
+        None => return menu::run(&paths, client).await,
+    };
 
-    Ok(())
+    client.shutdown().await;
+    result
 }
