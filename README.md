@@ -45,7 +45,7 @@ telyzer/
 ├── .gitignore
 ├── Cargo.toml
 ├── Cargo.lock
-├── LICENCE
+├── LICENSE
 ├── README.md
 ├── clippy.toml
 ├── rustfmt.toml
