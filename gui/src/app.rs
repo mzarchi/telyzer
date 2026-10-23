@@ -1,4 +1,6 @@
-#[derive(Default)]
+use iced::Task;
+
+#[derive(Debug, Clone, Default)]
 pub struct LoginApp {
     pub phone: String,
     pub error: Option<String>,
@@ -8,26 +10,40 @@ pub struct LoginApp {
 pub enum Message {
     PhoneChanged(String),
     LoginPressed,
+    LoginResult(Result<(), String>),
 }
 
 impl LoginApp {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::PhoneChanged(value) => {
-                self.phone = value;
-                self.error = None;
+            Message::PhoneChanged(phone) => {
+                self.phone = phone;
+                Task::none()
             }
             Message::LoginPressed => {
-                if self.phone.trim().is_empty() {
-                    self.error = Some("Please enter a phone number".into());
-                } else {
-                    self.error = None;
-                    println!("Phone: {}", self.phone);
+                self.error = None;
+                
+                let phone = self.phone.clone();
+                Task::perform(
+                    async move {
+                        if phone.is_empty() {
+                            Err("Phone number cannot be empty".to_string())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    Message::LoginResult,
+                )
+            }
+            Message::LoginResult(result) => {
+                match result {
+                    Ok(_) => {
+                    }
+                    Err(e) => {
+                        self.error = Some(e);
+                    }
                 }
+                Task::none()
             }
         }
     }

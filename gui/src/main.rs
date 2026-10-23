@@ -3,15 +3,21 @@ mod constants;
 mod ui;
 
 use app::LoginApp;
-use constants::*;
+use constants::TITLE;
 
-fn main() -> iced::Result {
+pub fn main() -> iced::Result {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info".into()),
+        )
+        .init();
+
     iced::application(
-        LoginApp::new,
-        LoginApp::update,
-        ui::view,
+        TITLE,                 
+        LoginApp::update,      
+        ui::view,             
     )
-    .title(TITLE)
-    .window_size((WINDOW_WIDTH, WINDOW_HEIGHT))
+    .theme(|_| iced::Theme::Dark)
     .run()
 }

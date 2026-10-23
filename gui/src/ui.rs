@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, space, text, text_input};
+use iced::widget::{button, column, container, text, text_input, Space};
 use iced::{Element, Length};
 
 use crate::app::{LoginApp, Message};
@@ -19,12 +19,12 @@ pub fn view(app: &LoginApp) -> Element<'_, Message> {
         .on_press(Message::LoginPressed);
 
     let mut content = column![
-        space::vertical().height(SPACE_TOP),
+        Space::with_height(SPACE_TOP),
         title,
-        space::vertical().height(SPACE_AFTER_TITLE),
+        Space::with_height(SPACE_AFTER_TITLE),
         phone_label,
         phone_input,
-        space::vertical().height(SPACE_BEFORE_BUTTON),
+        Space::with_height(SPACE_BEFORE_BUTTON),
         login_button,
     ]
     .spacing(SPACE_BETWEEN_FIELDS)
