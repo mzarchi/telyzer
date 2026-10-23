@@ -8,7 +8,7 @@ members = [
 exclude = ["python-legacy"]
 
 [workspace.package]
-version = "0.1.0"
+version = "1.26.10"
 edition = "2021"
 rust-version = "1.80"
 license = "MIT"
@@ -19,6 +19,8 @@ repository = "https://github.com/mzarchi/telyzer"
 grammers-client = { git = "https://codeberg.org/Lonami/grammers.git" }
 grammers-session = { git = "https://codeberg.org/Lonami/grammers.git" }
 grammers-mtsender = { git = "https://codeberg.org/Lonami/grammers.git" }
+clap = { version = "4", features = ["derive"] }
+dialoguer = "0.11"
 
 tokio = { version = "1", features = ["full"] }
 

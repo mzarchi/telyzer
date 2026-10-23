@@ -43,4 +43,9 @@ impl TelyzerClient {
         let me = self.inner().get_me().await?;
         Ok(me)
     }
+    
+    pub async fn sign_out(&self) -> Result<()> {
+        self.inner().sign_out().await?;
+        Ok(())
+    }
 }

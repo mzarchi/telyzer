@@ -1,14 +1,15 @@
 mod commands;
+mod menu;
 
 use clap::{Parser, Subcommand};
 use telyzer_core::Paths;
 
 #[derive(Parser)]
 #[command(name = "telyzer")]
-#[command(version, about = "Telegram analyzer for power users")]
+#[command(version, about = "Telegram analyzer for experienced users")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -30,8 +31,9 @@ async fn main() -> anyhow::Result<()> {
     let paths = Paths::init()?;
 
     match cli.command {
-        Commands::Login => commands::login::run(&paths).await?,
-        Commands::Whoami => commands::whoami::run(&paths).await?,
+        Some(Commands::Login) => commands::login::run(&paths).await?,
+        Some(Commands::Whoami) => commands::whoami::run(&paths).await?,
+        None => menu::run(&paths).await?,
     }
 
     Ok(())
