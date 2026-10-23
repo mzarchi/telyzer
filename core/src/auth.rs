@@ -6,7 +6,7 @@ use grammers_client::peer::User;
 
 #[derive(Debug)]
 pub enum SignInResult {
-    Success(User),
+    Success(Box<User>),
     NeedPassword(PasswordToken),
 }
 
@@ -18,11 +18,11 @@ impl TelyzerClient {
 
     pub async fn sign_in(&self, token: &LoginToken, code: &str) -> Result<SignInResult> {
         match self.inner().sign_in(token, code).await {
-            Ok(user) => Ok(SignInResult::Success(user)),
+            Ok(user) => Ok(SignInResult::Success(Box::new(user))),
             Err(SignInError::PasswordRequired(password_token)) => {
                 Ok(SignInResult::NeedPassword(password_token))
             }
-            Err(e) => Err(CoreError::LoginFailed(e.to_string())),
+            Err(e) => Err(CoreError::SignIn(Box::new(e))),
         }
     }
 
@@ -35,7 +35,7 @@ impl TelyzerClient {
             .inner()
             .check_password(password_token, password)
             .await
-            .map_err(|e| CoreError::LoginFailed(e.to_string()))?;
+            .map_err(|e| CoreError::SignIn(Box::new(e)))?;
         Ok(user)
     }
 

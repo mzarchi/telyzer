@@ -28,11 +28,11 @@ pub enum CoreError {
     #[error("Telegram error: {0}")]
     Telegram(#[from] grammers_client::InvocationError),
 
+    #[error("Sign-in error: {0}")]
+    SignIn(Box<grammers_client::SignInError>),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-
-    #[error("Sign-in error: {0}")]
-    SignIn(#[from] grammers_client::SignInError),
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;
