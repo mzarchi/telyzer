@@ -2,7 +2,7 @@ use crate::config::Paths;
 use crate::error::{CoreError, Result};
 use crate::secrets::API_ID;
 use grammers_client::Client;
-use grammers_mtsender::{ConnectionParams, SenderPool, SenderPoolHandle};
+use grammers_mtsender::{ConnectionParams, SenderPool};
 use grammers_session::storages::SqliteSession;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
@@ -17,7 +17,9 @@ const LANG_CODE: &str = "en";
 /// and the session database is released.
 pub struct TelyzerClient {
     client: Client,
-    handle: SenderPoolHandle,
+    // Asks the sender pool to stop. Stored as a closure so this struct does not
+    // depend on the exact handle type grammers returns from `SenderPool`.
+    quit: Box<dyn FnOnce() + Send>,
     runner: JoinHandle<()>,
 }
 
@@ -45,10 +47,13 @@ impl TelyzerClient {
 
         let client = Client::new(handle.clone());
         let runner = tokio::spawn(runner.run());
+        let quit: Box<dyn FnOnce() + Send> = Box::new(move || {
+            handle.quit();
+        });
 
         Ok(Self {
             client,
-            handle,
+            quit,
             runner,
         })
     }
@@ -64,7 +69,7 @@ impl TelyzerClient {
     /// Stops the network task and waits until it has finished, which releases
     /// the SQLite session so its files can be safely deleted afterwards.
     pub async fn shutdown(self) {
-        self.handle.quit();
+        (self.quit)();
         let _ = self.runner.await;
     }
 }
